@@ -73,7 +73,12 @@ updatesFromFile filename = do
 
 updateInfoToUpdate :: FetchGitUpdateInfo -> IO (Either Warning FetchGitSpanUpdates)
 updateInfoToUpdate ui = do
-  let nixPrefetchCommand = "nix-prefetch-git " ++ unpack (urlString ui)
+  o <- nixPrefetchGit (urlString ui)
+  pure $ prefetchGitOutputToSpanUpdate ui <$> o
+
+nixPrefetchGit :: Text -> IO (Either Warning NixPrefetchGitOutput)
+nixPrefetchGit url = do
+  let nixPrefetchCommand = "nix-prefetch-git " ++ unpack url
       nixShellArgs = [ "-p", "nix-prefetch-git"
                      , "-p", "nix"
                      , "--command", nixPrefetchCommand
@@ -86,7 +91,7 @@ updateInfoToUpdate ui = do
     ExitSuccess   ->
       case decode (fromString nsStdout) of
         Nothing -> Left (InvalidPrefetchGitOutput (pack nsStdout))
-        Just o  -> Right (prefetchGitOutputToSpanUpdate ui o)
+        Just o  -> Right o
     ExitFailure e -> Left (NixShellFailed e)
 
 prefetchGitOutputToSpanUpdate :: FetchGitUpdateInfo
