@@ -10,6 +10,4 @@
 
 ## Under development
 
-This is currently set to always read from `test.nix` and write to `test2.nix`.
-
 The splicing is really dumb, it'll probably do bad things if whatever's being replaced bythe splice isn't the same length.
