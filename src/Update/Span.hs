@@ -5,6 +5,7 @@ module Update.Span
   , SourcePos(..)
   , SourceSpan(..)
   , updateSpan
+  , linearizeSourcePos
   ) where
 
 import           Data.Int    (Int64)
@@ -16,6 +17,10 @@ import           Prelude     hiding (length, lines, splitAt)
 data SourcePos = SourcePos{ line   :: !Int64
                           , column :: !Int64
                           }
+  deriving (Show)
+
+data SourcePosLinear = SourcePosLinear{ characterOffset :: !Int64
+                                      }
   deriving (Show)
 
 data SourceSpan = SourceSpan{ spanBegin :: SourcePos
@@ -30,12 +35,19 @@ data SpanUpdate = SpanUpdate{ updateSourceSpan :: SourceSpan
 
 updateSpan :: SpanUpdate -> Text -> Text
 updateSpan (SpanUpdate (SourceSpan b e) r) t =
-  let (before, _) = split b t
-      (_, end) = split e t
+  let bLinear = linearizeSourcePos t b
+      eLinear = linearizeSourcePos t e
+      (before, _) = split bLinear t
+      (_, end) = split eLinear t
   in before <> r <> end
 
-split :: SourcePos -> Text -> (Text, Text)
-split (SourcePos l c) t = splitAt charOffset t
-  where charOffset = lineCharOffset + fromIntegral c
+split :: SourcePosLinear -> Text -> (Text, Text)
+split (SourcePosLinear c) = splitAt (fromIntegral c)
+
+linearizeSourcePos :: Text -- ^ The string to linearize in
+                   -> SourcePos
+                   -> SourcePosLinear
+linearizeSourcePos t (SourcePos l c) = SourcePosLinear charOffset
+  where charOffset = fromIntegral lineCharOffset + c
         lineCharOffset = sum . fmap ((+1) . length) . genericTake l . lines $ t
 
