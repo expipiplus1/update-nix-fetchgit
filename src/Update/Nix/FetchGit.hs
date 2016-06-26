@@ -34,9 +34,14 @@ import           Data.Data
 import           Data.Functor.Compose
 deriving instance (Typeable f, Typeable g, Typeable a, Data (f (g a))) => Data (Compose f g a)
 
-data FetchGitArgs = FetchGitArgs{ urlStringExpr :: NExprLoc
-                                , revExpr       :: NExprLoc
-                                , sha256Expr    :: NExprLoc
+data GithubPath = GithubPath{ owner :: Text
+                            , repo  :: Text
+                            }
+                            deriving (Show)
+
+data FetchGitArgs = FetchGitArgs{ urlExpr    :: Either NExprLoc GithubPath
+                                , revExpr    :: NExprLoc
+                                , sha256Expr :: NExprLoc
                                 }
   deriving (Show)
 
@@ -108,9 +113,14 @@ fetchGitUpdateInfos t e = do
   traverse (fetchGitArgsToUpdate t) ass
 
 fetchGitArgsToUpdate :: Text -> FetchGitArgs -> Either Warning FetchGitUpdateInfo
-fetchGitArgsToUpdate t as = FetchGitUpdateInfo <$> exprText (urlStringExpr as)
+fetchGitArgsToUpdate t as = FetchGitUpdateInfo <$> extractUrlString (urlExpr as)
                                                <*> exprSpan t (revExpr as)
                                                <*> exprSpan t (sha256Expr as)
+
+extractUrlString :: Either NExprLoc GithubPath -> Either Warning Text
+extractUrlString = \case
+  Left e -> exprText e
+  Right (GithubPath o r) -> error "Todo: github urls"
 
 fetchgitCalleeNames :: [Text]
 fetchgitCalleeNames = ["fetchgit", "fetchgitPrivate"]
@@ -127,7 +137,7 @@ fetchGitValues e =
 extractFetchGitArgs :: NExprLoc -> Either Warning FetchGitArgs
 extractFetchGitArgs = \case
   AnnE _ (NSet bindings) ->
-    FetchGitArgs <$> extractAttr "url" bindings
+    FetchGitArgs <$> (Left <$> extractAttr "url" bindings)
                  <*> extractAttr "rev" bindings
                  <*> extractAttr "sha256" bindings
   e -> Left (ArgNotASet e)
