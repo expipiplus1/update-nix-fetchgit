@@ -10,4 +10,6 @@
 
 ## Under development
 
-The splicing is really dumb, it'll probably do bad things if whatever's being replaced bythe splice isn't the same length.
+Please report any issues!
+
+I'm `jophish` on Freenode; say hi!
