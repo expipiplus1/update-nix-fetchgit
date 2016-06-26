@@ -1,5 +1,5 @@
 { src ? { outPath = ./.; revCount = 0; gitTag = "dirty"; }
-, supportedPlatforms ? [ "x86_64-linux" ]
+, supportedPlatforms ? [ "x86_64-linux" "x86_64-darwin" ]
 , supportedCompilers ? [ "ghc7103" ]
 }:
 
