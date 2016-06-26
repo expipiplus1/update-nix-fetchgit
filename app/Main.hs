@@ -2,7 +2,6 @@
 
 module Main where
 
-import           Data.Foldable       (foldl')
 import           Data.Text.IO        (readFile, writeFile)
 import           Prelude             hiding (readFile, writeFile)
 import           System.Environment  (getArgs)
@@ -16,10 +15,9 @@ main =
       updatesFromFile filename >>= \case
         Left ws  -> print ws
         Right us -> do
-          let fs = updateSpan <$> us
-              f = foldl' (.) id fs
-          fileText <- readFile filename
-          let fileText' = f fileText
-          writeFile "test2.nix" fileText'
+          t <- readFile filename
+          case updateSpans us t of
+            Nothing -> putStrLn "Error: overlapping updates"
+            Just t' -> writeFile filename t'
     _ -> putStrLn "Usage: update-nix-fetchgit filename"
 
