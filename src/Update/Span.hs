@@ -14,13 +14,8 @@ import           Data.Monoid ((<>))
 import           Data.Text   (Text, length, lines, splitAt)
 import           Prelude     hiding (length, lines, splitAt)
 
-data SourcePos = SourcePos{ line   :: !Int64
-                          , column :: !Int64
+data SourcePos = SourcePos{ characterOffset :: !Int64
                           }
-  deriving (Show)
-
-data SourcePosLinear = SourcePosLinear{ characterOffset :: !Int64
-                                      }
   deriving (Show)
 
 data SourceSpan = SourceSpan{ spanBegin :: SourcePos
@@ -35,19 +30,18 @@ data SpanUpdate = SpanUpdate{ updateSourceSpan :: SourceSpan
 
 updateSpan :: SpanUpdate -> Text -> Text
 updateSpan (SpanUpdate (SourceSpan b e) r) t =
-  let bLinear = linearizeSourcePos t b
-      eLinear = linearizeSourcePos t e
-      (before, _) = split bLinear t
-      (_, end) = split eLinear t
+  let (before, _) = split b t
+      (_, end) = split e t
   in before <> r <> end
 
-split :: SourcePosLinear -> Text -> (Text, Text)
-split (SourcePosLinear c) = splitAt (fromIntegral c)
+split :: SourcePos -> Text -> (Text, Text)
+split (SourcePos c) = splitAt (fromIntegral c)
 
 linearizeSourcePos :: Text -- ^ The string to linearize in
+                   -> Int64 -- ^ The line offset
+                   -> Int64 -- ^ The column offset
                    -> SourcePos
-                   -> SourcePosLinear
-linearizeSourcePos t (SourcePos l c) = SourcePosLinear charOffset
+linearizeSourcePos t l c = SourcePos charOffset
   where charOffset = fromIntegral lineCharOffset + c
         lineCharOffset = sum . fmap ((+1) . length) . genericTake l . lines $ t
 

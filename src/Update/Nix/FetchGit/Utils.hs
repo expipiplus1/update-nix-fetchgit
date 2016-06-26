@@ -19,13 +19,13 @@ exprText = \case
   (AnnE _ (NStr (DoubleQuoted [Plain t]))) -> pure t
   e -> Left (NotAString e)
 
-exprSpan :: NExprLoc -> Either Warning SourceSpan
-exprSpan (AnnE (SrcSpan b e) _) = SourceSpan <$> deltaToSourcePos b
-                                             <*> deltaToSourcePos e
+exprSpan :: Text -> NExprLoc -> Either Warning SourceSpan
+exprSpan t (AnnE (SrcSpan b e) _) = SourceSpan <$> deltaToSourcePos t b
+                                               <*> deltaToSourcePos t e
 
-deltaToSourcePos :: Delta -> Either Warning SourcePos
-deltaToSourcePos = \case
-  Directed _ l c _ _ -> pure $ SourcePos l c
+deltaToSourcePos :: Text -> Delta -> Either Warning SourcePos
+deltaToSourcePos t = \case
+  Directed _ l c _ _ -> pure $ linearizeSourcePos t l c
   d -> Left (BadSourcePos d)
 
 extractAttr :: Text -> [Binding a] -> Either Warning a

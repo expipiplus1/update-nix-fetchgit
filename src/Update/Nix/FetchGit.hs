@@ -63,7 +63,7 @@ updatesFromFile filename = do
   case parseNixTextLoc t of
     Failure d -> pure $ Left (CouldNotParseInput d)
     Success e -> do
-      let Right updateInfos = fetchGitUpdateInfos e
+      let Right updateInfos = fetchGitUpdateInfos t e
       sequenceA <$> mapConcurrently updateInfoToUpdate updateInfos >>= \case
         Left w -> pure $ Left w
         Right pairs -> pure $ Right [u | FetchGitSpanUpdates{..} <- pairs
@@ -102,15 +102,15 @@ prefetchGitOutputToSpanUpdate u o =
                       (SpanUpdate (sha256Pos u) (quote $ sha256 o))
   where quote t = "\"" <> t <> "\""
 
-fetchGitUpdateInfos :: NExprLoc -> Either Warning [FetchGitUpdateInfo]
-fetchGitUpdateInfos e = do
+fetchGitUpdateInfos :: Text -> NExprLoc -> Either Warning [FetchGitUpdateInfo]
+fetchGitUpdateInfos t e = do
   ass <- fetchGitValues e
-  traverse fetchGitArgsToUpdate ass
+  traverse (fetchGitArgsToUpdate t) ass
 
-fetchGitArgsToUpdate :: FetchGitArgs -> Either Warning FetchGitUpdateInfo
-fetchGitArgsToUpdate as = FetchGitUpdateInfo <$> exprText (urlStringExpr as)
-                                             <*> exprSpan (revExpr as)
-                                             <*> exprSpan (sha256Expr as)
+fetchGitArgsToUpdate :: Text -> FetchGitArgs -> Either Warning FetchGitUpdateInfo
+fetchGitArgsToUpdate t as = FetchGitUpdateInfo <$> exprText (urlStringExpr as)
+                                               <*> exprSpan t (revExpr as)
+                                               <*> exprSpan t (sha256Expr as)
 
 fetchgitCalleeNames :: [Text]
 fetchgitCalleeNames = ["fetchgit", "fetchgitPrivate"]
