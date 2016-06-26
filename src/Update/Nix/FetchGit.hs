@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
@@ -12,56 +11,53 @@ module Update.Nix.FetchGit
   ( updatesFromFile
   ) where
 
-import           Control.Concurrent.Async    (mapConcurrently)
-import           Data.Aeson                  (FromJSON, decode)
-import           Data.ByteString.Lazy.UTF8   (fromString)
+import           Control.Concurrent.Async     (mapConcurrently)
 import           Data.Generics.Uniplate.Data
-import           Data.Monoid                 ((<>))
+import           Data.Monoid                  ((<>))
 import           Data.Text
-import qualified Data.Text.IO                as T
-import           GHC.Generics
+import qualified Data.Text.IO                 as T
 import           Nix.Expr
-import           Nix.Parser                  (Result (..), parseNixTextLoc)
-import           System.Exit                 (ExitCode (..))
-import           System.IO                   (hPutStrLn, stderr)
-import           System.Process              (readProcessWithExitCode)
+import           Nix.Parser                   (Result (..), parseNixTextLoc)
+import           Update.Nix.FetchGit.Prefetch
 import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
 
--- TODO: Remove when using base 4.9
+-- TODO: Remove when using base 4.9, necessary at the moment because Compose
+-- doesn't have a data declaration
 import           Data.Data
 import           Data.Functor.Compose
-deriving instance (Typeable f, Typeable g, Typeable a, Data (f (g a))) => Data (Compose f g a)
+deriving instance (Typeable f, Typeable g, Typeable a, Data (f (g a)))
+  => Data (Compose f g a)
 
+-- | Information describing a repo location on Github
 data GithubPath = GithubPath{ owner :: Text
                             , repo  :: Text
                             }
                             deriving (Show)
 
+-- | A fetchgit, fetchgitPrivate or fetchFromGitHub value's expressions
 data FetchGitArgs = FetchGitArgs{ urlExpr    :: Either NExprLoc GithubPath
                                 , revExpr    :: NExprLoc
                                 , sha256Expr :: NExprLoc
                                 }
   deriving (Show)
 
+-- | The info needed to find the latest git version and the info about where to
+-- update the rev and sha256.
 data FetchGitUpdateInfo = FetchGitUpdateInfo{ urlString :: Text
                                             , revPos    :: SourceSpan
                                             , sha256Pos :: SourceSpan
                                             }
   deriving (Show)
 
+-- | A pair of 'SpanUpdate's for updating a single fetchgit value.
 data FetchGitSpanUpdates = FetchGitSpanUpdates{ revUpdate    :: SpanUpdate
                                               , sha256Update :: SpanUpdate
                                               }
   deriving (Show)
 
-data NixPrefetchGitOutput = NixPrefetchGitOutput{ url    :: Text
-                                                , rev    :: Text
-                                                , sha256 :: Text
-                                                }
-  deriving (Show, Generic, FromJSON)
-
+-- | Gather the 'SpanUpdate's for a file at a particular filepath
 updatesFromFile :: FilePath -> IO (Either Warning [SpanUpdate])
 updatesFromFile filename = do
   t <- T.readFile filename
@@ -75,30 +71,13 @@ updatesFromFile filename = do
                                     , u <- [revUpdate, sha256Update]
                                     ]
 
-
+-- | Create a pair of 'SpanUpdate's given a 'FetchGitUpdateInfo'
 updateInfoToUpdate :: FetchGitUpdateInfo -> IO (Either Warning FetchGitSpanUpdates)
 updateInfoToUpdate ui = do
   o <- nixPrefetchGit (urlString ui)
   pure $ prefetchGitOutputToSpanUpdate ui <$> o
 
-nixPrefetchGit :: Text -> IO (Either Warning NixPrefetchGitOutput)
-nixPrefetchGit url = do
-  let nixPrefetchCommand = "nix-prefetch-git " ++ unpack url
-      nixShellArgs = [ "-p", "nix-prefetch-git"
-                     , "-p", "nix"
-                     , "--command", nixPrefetchCommand
-                     ]
-      nsStdin = ""
-  (exitCode, nsStdout, nsStderr) <-
-    readProcessWithExitCode "nix-shell" nixShellArgs nsStdin
-  hPutStrLn stderr nsStderr
-  pure $ case exitCode of
-    ExitSuccess   ->
-      case decode (fromString nsStdout) of
-        Nothing -> Left (InvalidPrefetchGitOutput (pack nsStdout))
-        Just o  -> Right o
-    ExitFailure e -> Left (NixShellFailed e)
-
+-- | Use the output of nix-prefetch-git to create a pair of updates
 prefetchGitOutputToSpanUpdate :: FetchGitUpdateInfo
                               -> NixPrefetchGitOutput
                               -> FetchGitSpanUpdates
@@ -107,21 +86,28 @@ prefetchGitOutputToSpanUpdate u o =
                       (SpanUpdate (sha256Pos u) (quote $ sha256 o))
   where quote t = "\"" <> t <> "\""
 
+-- | Given an expression, return all the opportunities for updates for any
+-- subexpression.
 fetchGitUpdateInfos :: Text -> NExprLoc -> Either Warning [FetchGitUpdateInfo]
 fetchGitUpdateInfos t e = do
   ass <- fetchGitValues e
   traverse (fetchGitArgsToUpdate t) ass
 
+-- | Given some arguments to fetchgit, extract the information necessary to
+-- update it
 fetchGitArgsToUpdate :: Text -> FetchGitArgs -> Either Warning FetchGitUpdateInfo
 fetchGitArgsToUpdate t as = FetchGitUpdateInfo <$> extractUrlString (urlExpr as)
                                                <*> exprSpan t (revExpr as)
                                                <*> exprSpan t (sha256Expr as)
 
+-- | Get the url from either a nix expression for the url or a repo and owner
+-- expression.
 extractUrlString :: Either NExprLoc GithubPath -> Either Warning Text
 extractUrlString = \case
   Left e -> exprText e
   Right (GithubPath o r) -> error "Todo: github urls"
 
+-- | The names for fetchgit like values.
 fetchgitCalleeNames :: [Text]
 fetchgitCalleeNames = ["fetchgit", "fetchgitPrivate"]
 
@@ -134,6 +120,7 @@ fetchGitValues e =
                         ]
   in traverse extractFetchGitArgs fetchGitArgs
 
+-- | Extract a 'FetchGitArgs' from the attrset being passed to fetchgit.
 extractFetchGitArgs :: NExprLoc -> Either Warning FetchGitArgs
 extractFetchGitArgs = \case
   AnnE _ (NSet bindings) ->
