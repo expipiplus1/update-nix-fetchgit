@@ -60,7 +60,7 @@ function run_test_suite() {
     if ! "$updater" $test_name.out.nix; then
         error "$test_name: Error running the updater."
     fi
-    if ! diff $test_name.out.nix $test_name.expected.nix; then
+    if ! diff $test_name.expected.nix $test_name.out.nix; then
         error "$test_name: Incorrect output."
     fi
     echo "$test_name: Passed."
