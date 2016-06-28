@@ -55,9 +55,11 @@ function run_test_suite() {
     local test_name=$(basename $input .in.nix)
     cp $test_name.in.nix $test_name.out.nix
     echo "$test_name: Starting."
-    "$updater" $test_name.out.nix
+    if ! "$updater" $test_name.out.nix; then
+        error "$test_name: Error running the updater."
+    fi
     if ! diff $test_name.out.nix $test_name.expected.nix; then
-        error "$test_name: Test failed."
+        error "$test_name: Incorrect output."
     fi
     echo "$test_name: Passed."
   done
