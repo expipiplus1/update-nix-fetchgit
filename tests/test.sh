@@ -8,6 +8,8 @@
 # to make sure that multiple instances of this script can be run at
 # the same time without stepping on eachother.
 
+set -ue
+
 # Change to the directory where this script is located.
 cd $(dirname $0)
 
