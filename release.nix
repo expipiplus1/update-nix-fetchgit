@@ -9,8 +9,8 @@ let
   hnixSrc = (import <nixpkgs> {}).fetchFromGitHub{
     owner = "expipiplus1";
     repo = "hnix";
-    rev = "295e26b2081552d3a70e5a249dc61481e7482477";
-    sha256 = "01h2vnkwc1izp7nw4j59nl07jnd3s6nrwlmr4ilkkngkxnrcl5vk";
+    rev = "a19a943f9b2b0f937c6fc6ce309bf425659133c9";
+    sha256 = "0wxv5gmq7w3j8rzs000hskmbvdizcrhf44vpjw2xja519a4fz2r8";
   };
 
 in

@@ -1,17 +1,42 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase       #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE OverloadedStrings  #-}
 
 module Update.Nix.FetchGit.Utils
-  ( extractAttr
+  ( RepoLocation(..)
+  , extractUrlString
+  , extractAttr
   , exprText
   , exprSpan
+  , traverse2
+  , sequenceA2
+  , mapConcurrently2
   ) where
 
+import           Control.Concurrent.Async    (mapConcurrently)
+import           Data.Data                   (Data)
+import           Data.Functor.Compose        (Compose (..))
 import           Data.Maybe                  (catMaybes)
+import           Data.Monoid                 ((<>))
 import           Data.Text
 import           Nix.Expr
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
+
+-- | A repo can either be on github, or have an url specified
+data RepoLocation = GitHub{ owner :: Text
+                          , repo  :: Text
+                          }
+                  | URL Text
+  deriving (Show, Data)
+
+-- | Get the url from either a nix expression for the url or a repo and owner
+-- expression.
+extractUrlString :: RepoLocation -> Text
+extractUrlString = \case
+  URL u -> u
+  GitHub o r -> "git@github.com:" <> o <> "/" <> r <> ".git"
 
 -- | Get the string value of a particular expression, returns a 'Warning' if
 -- the expression is not a string value.
@@ -47,3 +72,15 @@ matchAttr t = \case
   NamedVar [StaticKey t'] x | t == t' -> Just x
   NamedVar _ _ -> Nothing
   Inherit _ _  -> Nothing
+
+traverse2 :: (Traversable t, Traversable s, Applicative f)
+          => (a -> f b) -> t (s a) -> f (t (s b))
+traverse2 f = fmap getCompose . traverse f . Compose
+
+sequenceA2 :: (Traversable t, Traversable s, Applicative f)
+            => t (s (f a)) -> f (t (s a))
+sequenceA2 = fmap getCompose . sequenceA . Compose
+
+mapConcurrently2 :: (Traversable t, Traversable s) => (a -> IO b) -> t (s a) -> IO (t (s b))
+mapConcurrently2 f = fmap getCompose . mapConcurrently f . Compose
+

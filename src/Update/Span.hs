@@ -1,4 +1,5 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE LambdaCase         #-}
 
 -- | This module deals with updating spans characters in values of type Text.
 --
@@ -13,6 +14,7 @@ module Update.Span
   , linearizeSourcePos
   ) where
 
+import           Data.Data   (Data)
 import           Data.Int    (Int64)
 import           Data.List   (genericTake, sortOn)
 import           Data.Monoid ((<>))
@@ -22,7 +24,7 @@ import           Prelude     hiding (length, lines, splitAt)
 -- | A position in a text file
 newtype SourcePos = SourcePos{ characterOffset :: Int64
                              }
-  deriving (Show, Eq, Ord)
+  deriving (Show, Eq, Ord, Data)
 
 -- | A span of characters with a beginning and an end.
 --
@@ -30,14 +32,14 @@ newtype SourcePos = SourcePos{ characterOffset :: Int64
 data SourceSpan = SourceSpan{ spanBegin :: SourcePos
                             , spanEnd   :: SourcePos
                             }
-  deriving (Show)
+  deriving (Show, Data)
 
 -- | A span, and some text to insert there instead, they don't have to be the
 -- same length.
 data SpanUpdate = SpanUpdate{ updateSourceSpan :: SourceSpan
                             , updateContents   :: Text
                             }
-  deriving (Show)
+  deriving (Show, Data)
 
 -- | Update many spans in a file. This function returns 'Nothing' if the spans
 -- overlap. It modifies the offsets of the spans if earlier spans insert text
