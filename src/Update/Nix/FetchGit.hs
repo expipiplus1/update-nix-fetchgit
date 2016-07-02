@@ -1,18 +1,11 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveFoldable     #-}
-{-# LANGUAGE DeriveFunctor      #-}
-{-# LANGUAGE DeriveTraversable  #-}
-{-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Update.Nix.FetchGit
   ( updatesFromFile
   ) where
 
+import           Control.Concurrent.Async    (mapConcurrently)
 import           Data.Generics.Uniplate.Data
 import           Data.Monoid                  ((<>))
 import           Data.Text                    hiding (concat, concatMap)
@@ -21,31 +14,9 @@ import           Nix.Expr
 import           Nix.Parser                   (Result (..), parseNixTextLoc)
 import           Update.Nix.FetchGit.Prefetch
 import           Update.Nix.FetchGit.Utils
+import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
-
--- TODO: Remove when using base 4.9, necessary at the moment because Compose
--- doesn't have a data declaration
-import           Data.Data
-import           Data.Functor.Compose
-deriving instance (Typeable f, Typeable g, Typeable a, Data (f (g a)))
-  => Data (Compose f g a)
-
---------------------------------------------------------------------------------
--- The data type we pass around and update
---------------------------------------------------------------------------------
-
--- | A place to update with any sub-sources. The sub-sources are used in
--- getting the latest commit date for updating a version tag.
---
--- The type parameter is the type used to represent fetchgit calls
-data UpdateSource git = VersionSet{ versionExpr :: NExprLoc
-                                  , sources     :: [UpdateSource git]
-                                  }
-                      | FetchGit{ args    :: git
-                                , sources :: [UpdateSource git]
-                                }
-  deriving (Show, Data, Functor, Foldable, Traversable)
 
 --------------------------------------------------------------------------------
 -- Tying it all together
@@ -60,7 +31,7 @@ updatesFromFile filename = do
     Success e -> case fetchGitUpdateInfos t e of
       Left w -> pure (Left w)
       Right updateInfos ->
-        sequenceA2 <$> mapConcurrently2 updateInfoToUpdate updateInfos >>= \case
+        sequenceA <$> mapConcurrently updateInfoToUpdate updateInfos >>= \case
           Left w -> pure $ Left w
           Right pairs -> pure $ Right (universeBi pairs)
 
@@ -68,55 +39,40 @@ updatesFromFile filename = do
 -- subexpression.
 fetchGitUpdateInfos :: Text
                     -> NExprLoc
-                    -> Either Warning [UpdateSource FetchGitUpdateInfo]
+                    -> Either Warning (FetchTree FetchGitUpdateInfo)
 fetchGitUpdateInfos t e = do
-  -- Get the 'FetchGitArgs' values from the tree
-  argTrees <- exprToUpdateSource e
-  -- Get the 'FetchGitUpdateInfo' values
-  traverse2 (fetchGitArgsToUpdate t) argTrees
+  -- Convert the Nix AST to a tree with fetch information.
+  fetchTree <- exprToFetchTree e
+  -- Linearize the source file info and make the fetch data easier to use.
+  -- TODO: only linearize at the very end when we are writing to the file
+  traverse (fetchGitArgsToUpdate t) fetchTree
 
 --------------------------------------------------------------------------------
--- Extracting places to update from the AST
+-- Extracting information about fetches from the AST
 --------------------------------------------------------------------------------
 
--- | A fetchgit, fetchgitPrivate or fetchFromGitHub value's expressions
-data FetchGitArgs = FetchGitArgs{ repoLocation :: RepoLocation
-                                , revExpr      :: NExprLoc
-                                , sha256Expr   :: NExprLoc
-                                }
-  deriving (Show, Data)
+-- Get a FetchTree from a nix expression.
+exprToFetchTree :: NExprLoc -> Either Warning (FetchTree FetchGitArgs)
+exprToFetchTree = para exprToFetchTreeCore
 
--- Get a set of 'UpdateSource' trees from a nix expression.
-exprToUpdateSource :: NExprLoc -> Either Warning [UpdateSource FetchGitArgs]
-exprToUpdateSource = sequenceA . para exprChildrenToUpdateSources
-
--- Given an expression and the update sources contained in its children, return
--- a new set of update sources
-exprChildrenToUpdateSources :: NExprLoc
-                            -> [[Either Warning (UpdateSource FetchGitArgs)]]
-                            -> [Either Warning (UpdateSource FetchGitArgs)]
-exprChildrenToUpdateSources e subss =
-  let subs = concat subss
-  in case e of
-
-      -- If this is a call to some symbol
+exprToFetchTreeCore :: NExprLoc
+                    -> [Either Warning (FetchTree FetchGitArgs)]
+                    -> Either Warning (FetchTree FetchGitArgs)
+exprToFetchTreeCore e subs =
+  case e of
+      -- If it is a call (application) of fetchgit, record the
+      -- arguments since we will need to update them.
       AnnE _ (NApp (AnnE _ (NSym fg)) a)
-        -- And the symbol is a name for fetchgit
-        | fg `elem` fetchgitCalleeNames
-        -> [FetchGit <$> extractFetchGitArgs a <*> sequenceA subs]
+        | fg `elem` ["fetchgit", "fetchgitPrivate"]
+        -> FetchNode <$> extractFetchGitArgs a
 
-      -- If this is an attr set with a version attribute, remember where
-      -- the version attribute was and set the sub sources
+      -- If it is an attribute set, find any attributes in it that we
+      -- might want to update.
       AnnE _ (NSet bindings)
-        | Right versionAttr <- extractAttr "version" bindings
-        -> [VersionSet versionAttr <$> sequenceA subs]
+        -> Node <$> findAttr "version" bindings <*> sequenceA subs
 
-      -- If this is something else, just forward the sub sources
-      _somethingUninteresting -> subs
-
--- | The names for fetchgit like values.
-fetchgitCalleeNames :: [Text]
-fetchgitCalleeNames = ["fetchgit", "fetchgitPrivate"]
+      -- If this is something uninteresting, just wrap the sub-trees.
+      _ -> Node Nothing <$> sequenceA subs
 
 -- | Extract a 'FetchGitArgs' from the attrset being passed to fetchgit.
 extractFetchGitArgs :: NExprLoc -> Either Warning FetchGitArgs
@@ -131,14 +87,6 @@ extractFetchGitArgs = \case
 -- Massaging the data a little to make it easier to process
 --------------------------------------------------------------------------------
 
--- | The info needed to find the latest git version and the info about where to
--- update the rev and sha256.
-data FetchGitUpdateInfo = FetchGitUpdateInfo{ urlString :: Text
-                                            , revPos    :: SourceSpan
-                                            , sha256Pos :: SourceSpan
-                                            }
-  deriving (Show)
-
 -- | Given some arguments to fetchgit, extract the information necessary to
 -- update it
 fetchGitArgsToUpdate :: Text -> FetchGitArgs -> Either Warning FetchGitUpdateInfo
@@ -147,15 +95,8 @@ fetchGitArgsToUpdate t as = FetchGitUpdateInfo (extractUrlString (repoLocation a
                                            <*> exprSpan t (sha256Expr as)
 
 --------------------------------------------------------------------------------
--- The type we have after calling nix-prefetch-git, A pair of SpanUpdates for
--- each fetchgit call.
+-- Getting updated information from the internet.
 --------------------------------------------------------------------------------
-
--- | A pair of 'SpanUpdate's for updating a single fetchgit value.
-data FetchGitSpanUpdates = FetchGitSpanUpdates{ revUpdate    :: SpanUpdate
-                                              , sha256Update :: SpanUpdate
-                                              }
-  deriving (Show, Data)
 
 -- | Create a pair of 'SpanUpdate's given a 'FetchGitUpdateInfo'
 updateInfoToUpdate :: FetchGitUpdateInfo -> IO (Either Warning FetchGitSpanUpdates)
@@ -171,5 +112,3 @@ prefetchGitOutputToSpanUpdate u o =
   FetchGitSpanUpdates (SpanUpdate (revPos u) (quote $ rev o))
                       (SpanUpdate (sha256Pos u) (quote $ sha256 o))
   where quote t = "\"" <> t <> "\""
-
-
