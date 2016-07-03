@@ -44,10 +44,10 @@ exprText = \case
 
 -- | Get the 'SourceSpan' covering a particular expression.
 exprSpan :: NExprLoc -> SourceSpan
-exprSpan (AnnE (SrcSpan begin end) _) =
-         SourceSpan (deltaToSourcePos begin) (deltaToSourcePos end)
+exprSpan expr = SourceSpan (deltaToSourcePos begin) (deltaToSourcePos end)
+         where (AnnE (SrcSpan begin end) _) = expr
 
--- | Go from a 'Delta' to a 'SourcePos' using an irrefutable pattern.
+-- | Go from a 'Delta' to a 'SourcePos'.
 deltaToSourcePos :: Delta -> SourcePos
 deltaToSourcePos delta = (SourcePos line column)
                  where (Directed _ line column _ _) = delta
