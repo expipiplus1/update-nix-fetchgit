@@ -6,6 +6,7 @@
 module Update.Nix.FetchGit.Utils
   ( RepoLocation(..)
   , extractUrlString
+  , quoteString
   , extractAttr
   , findAttr
   , exprText
@@ -27,6 +28,11 @@ extractUrlString = \case
   URL u -> u
   GitHub o r -> "git@github.com:" <> o <> "/" <> r <> ".git"
 
+-- Add double quotes around a string so it can be inserted into a Nix
+-- file as a string literal.
+quoteString :: Text -> Text
+quoteString t = "\"" <> t <> "\""
+
 -- | Get the string value of a particular expression, returns a 'Warning' if
 -- the expression is not a string value.
 --
@@ -37,15 +43,14 @@ exprText = \case
   e -> Left (NotAString e)
 
 -- | Get the 'SourceSpan' covering a particular expression.
-exprSpan :: Text -> NExprLoc -> Either Warning SourceSpan
-exprSpan t (AnnE (SrcSpan b e) _) = SourceSpan <$> deltaToSourcePos t b
-                                               <*> deltaToSourcePos t e
+exprSpan :: NExprLoc -> SourceSpan
+exprSpan (AnnE (SrcSpan begin end) _) =
+         SourceSpan (deltaToSourcePos begin) (deltaToSourcePos end)
 
--- | Go from a 'Delta' to a 'SourcePos' in a particular bit of Text
-deltaToSourcePos :: Text -> Delta -> Either Warning SourcePos
-deltaToSourcePos t = \case
-  Directed _ l c _ _ -> pure $ linearizeSourcePos t l c
-  d -> Left (BadSourcePos d)
+-- | Go from a 'Delta' to a 'SourcePos' using an irrefutable pattern.
+deltaToSourcePos :: Delta -> SourcePos
+deltaToSourcePos delta = (SourcePos line column)
+                 where (Directed _ line column _ _) = delta
 
 -- | Extract a named attribute from an attrset.
 extractAttr :: Text -> [Binding a] -> Either Warning a
