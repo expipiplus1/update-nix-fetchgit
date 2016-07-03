@@ -7,7 +7,6 @@ module Update.Nix.FetchGit
 
 import           Control.Concurrent.Async     (mapConcurrently)
 import           Data.Generics.Uniplate.Data
-import           Data.Text                    (Text)
 import qualified Data.Text.IO                 as T
 import           Nix.Expr
 import           Nix.Parser                   (Result (..), parseNixTextLoc)
@@ -76,8 +75,10 @@ extractFetchGitArgs = \case
 
 getFetchGitLatestInfo :: FetchGitArgs -> IO (Either Warning FetchGitLatestInfo)
 getFetchGitLatestInfo args = do
-  Right o <- nixPrefetchGit (extractUrlString $ repoLocation args)
-  pure $ return $ FetchGitLatestInfo args (rev o) (sha256 o)
+  result <- nixPrefetchGit (extractUrlString $ repoLocation args)
+  case result of
+    Left error -> pure $ Left error
+    Right o -> pure $ return $ FetchGitLatestInfo args (rev o) (sha256 o)
 
 --------------------------------------------------------------------------------
 -- Deciding which parts of the Nix file should be updated and how.
