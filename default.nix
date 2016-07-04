@@ -1,5 +1,5 @@
 { mkDerivation, aeson, ansi-wl-pprint, async, base, bytestring
-, data-fix, hnix, process, stdenv, text, transformers, uniplate
+, data-fix, hnix, process, stdenv, text, time, transformers, uniplate
 , utf8-string
 }:
 mkDerivation {
@@ -9,7 +9,7 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    aeson async base bytestring data-fix hnix process text transformers
+    aeson async base bytestring data-fix hnix process text time transformers
     uniplate utf8-string
   ];
   executableHaskellDepends = [ ansi-wl-pprint base hnix text ];

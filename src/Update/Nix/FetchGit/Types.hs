@@ -9,6 +9,7 @@ module Update.Nix.FetchGit.Types where
 import           Data.Data             (Data)
 import           Data.Functor.Compose
 import           Data.Text             (Text)
+import           Data.Time             (Day)
 import           Data.Typeable         (Typeable)
 import           Nix.Expr              (NExprLoc)
 
@@ -41,6 +42,7 @@ data FetchGitArgs = FetchGitArgs { repoLocation :: RepoLocation
 data FetchGitLatestInfo = FetchGitLatestInfo { originalInfo :: FetchGitArgs
                                              , latestRev    :: Text
                                              , latestSha256 :: Text
+                                             , latestDate   :: Day
                                              }
   deriving (Show, Data)
 

@@ -11,11 +11,13 @@ module Update.Nix.FetchGit.Utils
   , findAttr
   , exprText
   , exprSpan
+  , parseISO8601DateToDay
   ) where
 
 import           Data.Maybe                  (catMaybes)
 import           Data.Monoid                 ((<>))
 import           Data.Text
+import           Data.Time
 import           Nix.Expr
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Warning
@@ -74,3 +76,11 @@ matchAttr t = \case
   NamedVar [StaticKey t'] x | t == t' -> Just x
   NamedVar _ _ -> Nothing
   Inherit _ _  -> Nothing
+
+-- Takes an ISO 8601 date and returns just the day portion.
+parseISO8601DateToDay :: Text -> Either Warning Day
+parseISO8601DateToDay t =
+  let justDate = (unpack . Prelude.head . (splitOn "T")) t in
+  case parseTimeM False defaultTimeLocale "%Y-%m-%d" justDate of
+    Nothing -> Left $ InvalidDateString t
+    Just day -> return day

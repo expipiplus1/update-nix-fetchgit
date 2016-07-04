@@ -78,7 +78,8 @@ getFetchGitLatestInfo args = do
   result <- nixPrefetchGit (extractUrlString $ repoLocation args)
   case result of
     Left e -> pure $ Left e
-    Right o -> pure $ return $ FetchGitLatestInfo args (rev o) (sha256 o)
+    Right o -> return $ FetchGitLatestInfo args (rev o) (sha256 o)
+                                           <$> (parseISO8601DateToDay (date o))
 
 --------------------------------------------------------------------------------
 -- Deciding which parts of the Nix file should be updated and how.
