@@ -77,7 +77,7 @@ getFetchGitLatestInfo :: FetchGitArgs -> IO (Either Warning FetchGitLatestInfo)
 getFetchGitLatestInfo args = do
   result <- nixPrefetchGit (extractUrlString $ repoLocation args)
   case result of
-    Left error -> pure $ Left error
+    Left e -> pure $ Left e
     Right o -> pure $ return $ FetchGitLatestInfo args (rev o) (sha256 o)
 
 --------------------------------------------------------------------------------
