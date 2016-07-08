@@ -6,7 +6,9 @@ module Update.Nix.FetchGit
   ) where
 
 import           Control.Concurrent.Async     (mapConcurrently)
+import           Data.Foldable                (toList)
 import           Data.Generics.Uniplate.Data
+import           Data.Text                    (pack)
 import qualified Data.Text.IO                 as T
 import           Nix.Expr
 import           Nix.Parser                   (Result (..), parseNixTextLoc)
@@ -86,10 +88,28 @@ getFetchGitLatestInfo args = do
 --------------------------------------------------------------------------------
 
 fetchTreeToSpanUpdates :: FetchTree FetchGitLatestInfo -> [SpanUpdate]
-fetchTreeToSpanUpdates (Node _ cs) = concatMap fetchTreeToSpanUpdates cs
+fetchTreeToSpanUpdates (Node maybeVersionExpr cs) =
+  (concatMap fetchTreeToSpanUpdates cs)
+  ++ (toList $ maybeVersionExpr >>= maybeUpdateVersion cs)
 fetchTreeToSpanUpdates (FetchNode f) = [revUpdate, sha256Update]
   where revUpdate = SpanUpdate (exprSpan (revExpr args))
                                (quoteString (latestRev f))
         sha256Update = SpanUpdate (exprSpan (sha256Expr args))
                                   (quoteString (latestSha256 f))
         args = (originalInfo f)
+
+-- Given a Nix expression representing a version value, and the
+-- children of the node that contains it, decides whether and how it
+-- should that version string should be updated.  We basically just
+-- take the latest date of all the fetches in the children.
+maybeUpdateVersion :: [FetchTree FetchGitLatestInfo] -> NExprLoc
+                   -> Maybe SpanUpdate
+maybeUpdateVersion cs versionExpr =
+  case versionDays (Node Nothing cs) of
+  [] -> Nothing
+  days -> Just $ SpanUpdate (exprSpan versionExpr)
+                            ((quoteString . pack . show . maximum) days)
+
+versionDays :: FetchTree FetchGitLatestInfo -> [Day]
+versionDays (Node _ cs) = concat (fmap versionDays cs)
+versionDays (FetchNode fgli) = [latestDate fgli]

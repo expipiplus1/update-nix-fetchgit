@@ -16,8 +16,8 @@ module Update.Nix.FetchGit.Utils
 
 import           Data.Maybe                  (catMaybes)
 import           Data.Monoid                 ((<>))
-import           Data.Text
-import           Data.Time
+import           Data.Text                   (Text, unpack, splitOn)
+import           Data.Time                   (parseTimeM, defaultTimeLocale)
 import           Nix.Expr
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Warning

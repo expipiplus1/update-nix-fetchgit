@@ -9,7 +9,7 @@ module Update.Nix.FetchGit.Types where
 import           Data.Data             (Data)
 import           Data.Functor.Compose
 import           Data.Text             (Text)
-import           Data.Time             (Day)
+import qualified Data.Time             (Day)
 import           Data.Typeable         (Typeable)
 import           Nix.Expr              (NExprLoc)
 
@@ -17,6 +17,9 @@ import           Nix.Expr              (NExprLoc)
 -- doesn't have a data declaration
 deriving instance (Typeable f, Typeable g, Typeable a, Data (f (g a)))
   => Data (Compose f g a)
+
+-- | The day portion of a date, with no timezone information.
+type Day = Data.Time.Day
 
 -- | A tree with a structure similar to the AST of the Nix file we are
 -- parsing, but which only contains the information we care about.
