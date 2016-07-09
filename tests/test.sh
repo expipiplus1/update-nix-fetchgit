@@ -42,6 +42,15 @@ function prepare_local_test_repos() {
   git commit -m "added stuff" test.txt
   popd
 
+  export GIT_AUTHOR_DATE='1468031426 -0700'
+  export GIT_COMMITTER_DATE='1468031426 -0700'
+  git init repo2
+  pushd repo2
+  echo hi > test.txt
+  git add test.txt
+  git commit -m "initial commit"
+  popd
+
   popd
 }
 
