@@ -5,6 +5,7 @@ module Main where
 import           Data.Text.IO        (readFile, writeFile)
 import           Prelude             hiding (readFile, writeFile)
 import           System.Environment  (getArgs)
+import           System.Exit
 import           Update.Nix.FetchGit
 import           Update.Span
 
@@ -26,5 +27,7 @@ main =
             -- If updates are needed, write to the file.
             t' | t' /= t -> writeFile filename t'
             _ -> return ()
-    _ -> putStrLn "Usage: update-nix-fetchgit filename"
+    _ -> do
+      putStrLn "Usage: update-nix-fetchgit filename"
+      exitWith (ExitFailure 1)
 
