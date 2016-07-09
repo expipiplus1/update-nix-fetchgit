@@ -24,7 +24,8 @@ main =
           -- Try to update this text
           case updateSpans us t of
             Nothing -> putStrLn "Error: overlapping updates"
-            -- If it updated, write it out to the filename
-            Just t' -> writeFile filename t'
+            -- If updates are needed, write to the file.
+            Just t' | t' /= t -> writeFile filename t'
+            Just _ -> return ()
     _ -> putStrLn "Usage: update-nix-fetchgit filename"
 
