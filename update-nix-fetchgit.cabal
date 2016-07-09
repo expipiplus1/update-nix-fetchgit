@@ -18,8 +18,8 @@ library
   exposed-modules:     Update.Nix.FetchGit
                      , Update.Span
                      , Update.Nix.FetchGit.Prefetch
-  other-modules:       Update.Nix.FetchGit.Warning
-                     , Update.Nix.FetchGit.Utils
+                     , Update.Nix.FetchGit.Warning
+  other-modules:       Update.Nix.FetchGit.Utils
                      , Update.Nix.FetchGit.Types
   build-depends:       base >= 4.7 && < 5
                      , aeson >= 0.9 && < 0.12

@@ -7,6 +7,7 @@ import           Prelude             hiding (readFile, writeFile)
 import           System.Environment  (getArgs)
 import           System.Exit
 import           Update.Nix.FetchGit
+import           Update.Nix.FetchGit.Warning
 import           Update.Span
 
 main :: IO ()
@@ -19,7 +20,7 @@ main =
       -- Get the updates from this file.
       updatesFromFile t >>= \case
         -- If we have any errors, print them and finish.
-        Left ws -> print ws
+        Left ws -> printErrorAndExit ws
         Right us -> do
           -- Update the text of the file in memory.
           case updateSpans us t of
@@ -30,3 +31,7 @@ main =
       putStrLn "Usage: update-nix-fetchgit filename"
       exitWith (ExitFailure 1)
 
+printErrorAndExit :: Warning -> IO ()
+printErrorAndExit e = do
+  print e
+  exitWith (ExitFailure 1)
