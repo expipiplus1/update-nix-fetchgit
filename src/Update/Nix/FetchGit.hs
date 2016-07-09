@@ -8,8 +8,7 @@ module Update.Nix.FetchGit
 import           Control.Concurrent.Async     (mapConcurrently)
 import           Data.Foldable                (toList)
 import           Data.Generics.Uniplate.Data
-import           Data.Text                    (pack)
-import qualified Data.Text.IO                 as T
+import           Data.Text                    (Text, pack)
 import           Nix.Expr
 import           Nix.Parser                   (Result (..), parseNixTextLoc)
 import           Update.Nix.FetchGit.Prefetch
@@ -22,10 +21,10 @@ import           Update.Span
 -- Tying it all together
 --------------------------------------------------------------------------------
 
--- | Gather the 'SpanUpdate's for a file at a particular filepath.
-updatesFromFile :: FilePath -> IO (Either Warning [SpanUpdate])
-updatesFromFile filename = do
-  t <- T.readFile filename
+-- | Given the contents of a Nix file, returns the SpanUpdates
+-- all the parts of the file we want to update.
+updatesFromFile :: Text -> IO (Either Warning [SpanUpdate])
+updatesFromFile t =
   case parseNixTextLoc t of
     Failure parseError -> pure $ Left (CouldNotParseInput parseError)
     Success expr -> case exprToFetchTree expr of
