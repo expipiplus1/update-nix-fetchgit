@@ -10,7 +10,7 @@ import           Data.Foldable                (toList)
 import           Data.Generics.Uniplate.Data
 import           Data.Text                    (Text, pack)
 import           Nix.Expr
-import           Nix.Parser                   (Result (..), parseNixTextLoc)
+import           Nix.Parser                   (Result (..), parseNixFileLoc)
 import           Update.Nix.FetchGit.Prefetch
 import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Types
@@ -23,9 +23,9 @@ import           Update.Span
 
 -- | Given the contents of a Nix file, returns the SpanUpdates
 -- all the parts of the file we want to update.
-updatesFromFile :: Text -> IO (Either Warning [SpanUpdate])
-updatesFromFile t =
-  case parseNixTextLoc t of
+updatesFromFile :: FilePath -> IO (Either Warning [SpanUpdate])
+updatesFromFile f =
+  parseNixFileLoc f >>= \case
     Failure parseError -> pure $ Left (CouldNotParseInput parseError)
     Success expr -> case exprToFetchTree expr of
       Left scanError -> pure (Left scanError)

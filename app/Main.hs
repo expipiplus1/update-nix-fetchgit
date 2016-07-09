@@ -18,10 +18,10 @@ main =
     [filename] -> do
       t <- readFile filename
       -- Get the updates from this file.
-      updatesFromFile t >>= \case
+      updatesFromFile filename >>= \case
         -- If we have any errors, print them and finish.
         Left ws -> printErrorAndExit ws
-        Right us -> do
+        Right us ->
           -- Update the text of the file in memory.
           case updateSpans us t of
             -- If updates are needed, write to the file.
