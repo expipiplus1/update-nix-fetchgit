@@ -21,11 +21,10 @@ main =
         Right us -> do
           -- TODO: Avoid loading this file twice
           t <- readFile filename
-          -- Try to update this text
+          -- Update the text of the file in memory.
           case updateSpans us t of
-            Nothing -> putStrLn "Error: overlapping updates"
             -- If updates are needed, write to the file.
-            Just t' | t' /= t -> writeFile filename t'
-            Just _ -> return ()
+            t' | t' /= t -> writeFile filename t'
+            _ -> return ()
     _ -> putStrLn "Usage: update-nix-fetchgit filename"
 
