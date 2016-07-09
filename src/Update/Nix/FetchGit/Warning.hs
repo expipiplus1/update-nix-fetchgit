@@ -12,7 +12,7 @@ data Warning = CouldNotParseInput Doc
              | DuplicateAttrs Text
              | NotAString NExprLoc
              | BadSourcePos Delta
-             | NixPrefetchGitFailed Int
+             | NixPrefetchGitFailed Int Text
              | InvalidPrefetchGitOutput Text
              | InvalidDateString Text
   deriving (Show)

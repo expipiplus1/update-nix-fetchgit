@@ -11,7 +11,6 @@ import           Data.ByteString.Lazy.UTF8   (fromString)
 import           Data.Text
 import           GHC.Generics
 import           System.Exit                 (ExitCode (..))
-import           System.IO                   (hPutStrLn, stderr)
 import           System.Process              (readProcessWithExitCode)
 import           Update.Nix.FetchGit.Warning
 
@@ -30,9 +29,9 @@ nixPrefetchGit :: Text -- ^ The URL to prefetch
 nixPrefetchGit prefetchURL = do
   (exitCode, nsStdout, nsStderr) <-
     readProcessWithExitCode "nix-prefetch-git" [unpack prefetchURL] ""
-  hPutStrLn stderr nsStderr
+  -- hPutStrLn stderr nsStderr
   pure $ case exitCode of
-    ExitFailure e -> Left (NixPrefetchGitFailed e)
+    ExitFailure e -> Left (NixPrefetchGitFailed e (pack nsStderr))
     ExitSuccess ->
       case decode (fromString nsStdout) of
         Nothing -> Left (InvalidPrefetchGitOutput (pack nsStdout))
