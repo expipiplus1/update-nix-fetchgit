@@ -88,9 +88,9 @@ getFetchGitLatestInfo args = do
 --------------------------------------------------------------------------------
 
 fetchTreeToSpanUpdates :: FetchTree FetchGitLatestInfo -> [SpanUpdate]
-fetchTreeToSpanUpdates (Node maybeVersionExpr cs) =
+fetchTreeToSpanUpdates node@(Node _ cs) =
   concatMap fetchTreeToSpanUpdates cs ++
-  toList (maybeUpdateVersion cs =<< maybeVersionExpr)
+  toList (maybeUpdateVersion node)
 fetchTreeToSpanUpdates (FetchNode f) = [revUpdate, sha256Update]
   where revUpdate = SpanUpdate (exprSpan (revExpr args))
                                (quoteString (latestRev f))
@@ -99,17 +99,13 @@ fetchTreeToSpanUpdates (FetchNode f) = [revUpdate, sha256Update]
         args = originalInfo f
 
 -- Given a Nix expression representing a version value, and the
--- children of the node that contains it, decides whether and how it
--- should that version string should be updated.  We basically just
--- take the latest date of all the fetches in the children.
-maybeUpdateVersion :: [FetchTree FetchGitLatestInfo] -> NExprLoc
-                   -> Maybe SpanUpdate
-maybeUpdateVersion cs versionExpr =
-  case versionDays (Node Nothing cs) of
+-- children of the node that contains it, decides whether and how that
+-- version string should be updated.  We basically just take the
+-- maximum latest commit date of all the fetches in the children.
+maybeUpdateVersion :: FetchTree FetchGitLatestInfo -> Maybe SpanUpdate
+maybeUpdateVersion (Node Nothing _) = Nothing
+maybeUpdateVersion node@(Node (Just versionExpr) _) =
+  case (fmap latestDate . universeBi) node of
     [] -> Nothing
     days -> Just $ SpanUpdate (exprSpan versionExpr)
                               ((quoteString . pack . show . maximum) days)
-
-versionDays :: FetchTree FetchGitLatestInfo -> [Day]
-versionDays (Node _ cs) = concatMap versionDays cs
-versionDays (FetchNode fgli) = [latestDate fgli]
