@@ -81,7 +81,7 @@ getFetchGitLatestInfo args = do
   case result of
     Left e -> pure $ Left e
     Right o -> return $ FetchGitLatestInfo args (rev o) (sha256 o)
-                                           <$> (parseISO8601DateToDay (date o))
+                                           <$> parseISO8601DateToDay (date o)
 
 --------------------------------------------------------------------------------
 -- Deciding which parts of the Nix file should be updated and how.
@@ -89,14 +89,14 @@ getFetchGitLatestInfo args = do
 
 fetchTreeToSpanUpdates :: FetchTree FetchGitLatestInfo -> [SpanUpdate]
 fetchTreeToSpanUpdates (Node maybeVersionExpr cs) =
-  (concatMap fetchTreeToSpanUpdates cs)
-  ++ (toList $ maybeVersionExpr >>= maybeUpdateVersion cs)
+  concatMap fetchTreeToSpanUpdates cs ++
+  toList (maybeUpdateVersion cs =<< maybeVersionExpr)
 fetchTreeToSpanUpdates (FetchNode f) = [revUpdate, sha256Update]
   where revUpdate = SpanUpdate (exprSpan (revExpr args))
                                (quoteString (latestRev f))
         sha256Update = SpanUpdate (exprSpan (sha256Expr args))
                                   (quoteString (latestSha256 f))
-        args = (originalInfo f)
+        args = originalInfo f
 
 -- Given a Nix expression representing a version value, and the
 -- children of the node that contains it, decides whether and how it
@@ -111,5 +111,5 @@ maybeUpdateVersion cs versionExpr =
                             ((quoteString . pack . show . maximum) days)
 
 versionDays :: FetchTree FetchGitLatestInfo -> [Day]
-versionDays (Node _ cs) = concat (fmap versionDays cs)
+versionDays (Node _ cs) = concatMap versionDays cs
 versionDays (FetchNode fgli) = [latestDate fgli]

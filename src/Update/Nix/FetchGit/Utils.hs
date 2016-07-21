@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
@@ -51,7 +50,7 @@ exprSpan expr = SourceSpan (deltaToSourcePos begin) (deltaToSourcePos end)
 
 -- | Go from a 'Delta' to a 'SourcePos'.
 deltaToSourcePos :: Delta -> SourcePos
-deltaToSourcePos delta = (SourcePos line column)
+deltaToSourcePos delta = SourcePos line column
                  where (Directed _ line column _ _) = delta
 
 -- | Extract a named attribute from an attrset.
@@ -80,7 +79,7 @@ matchAttr t = \case
 -- Takes an ISO 8601 date and returns just the day portion.
 parseISO8601DateToDay :: Text -> Either Warning Day
 parseISO8601DateToDay t =
-  let justDate = (unpack . Prelude.head . (splitOn "T")) t in
+  let justDate = (unpack . Prelude.head . splitOn "T") t in
   case parseTimeM False defaultTimeLocale "%Y-%m-%d" justDate of
     Nothing -> Left $ InvalidDateString t
     Just day -> return day
