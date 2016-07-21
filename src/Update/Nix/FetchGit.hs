@@ -33,7 +33,7 @@ updatesFromFile filename = do
       Right treeWithArgs ->
         sequenceA <$> mapConcurrently getFetchGitLatestInfo treeWithArgs >>= \case
           Left getLatestInfoError -> pure $ Left getLatestInfoError
-          Right treeWithLatest -> pure $ return (fetchTreeToSpanUpdates treeWithLatest)
+          Right treeWithLatest -> pure $ pure $ fetchTreeToSpanUpdates treeWithLatest
 
 --------------------------------------------------------------------------------
 -- Extracting information about fetches from the AST
@@ -78,10 +78,10 @@ extractFetchGitArgs = \case
 getFetchGitLatestInfo :: FetchGitArgs -> IO (Either Warning FetchGitLatestInfo)
 getFetchGitLatestInfo args = do
   result <- nixPrefetchGit (extractUrlString $ repoLocation args)
-  case result of
-    Left e -> pure $ Left e
-    Right o -> return $ FetchGitLatestInfo args (rev o) (sha256 o)
-                                           <$> parseISO8601DateToDay (date o)
+  pure $ case result of
+    Left e -> Left e
+    Right o -> FetchGitLatestInfo args (rev o) (sha256 o)
+                                  <$> parseISO8601DateToDay (date o)
 
 --------------------------------------------------------------------------------
 -- Deciding which parts of the Nix file should be updated and how.
