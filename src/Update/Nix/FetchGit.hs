@@ -8,7 +8,7 @@ module Update.Nix.FetchGit
 import           Control.Concurrent.Async     (mapConcurrently)
 import           Data.Foldable                (toList)
 import           Data.Generics.Uniplate.Data
-import           Data.Text                    (Text, pack)
+import           Data.Text                    (pack)
 import           Nix.Expr
 import           Nix.Parser                   (Result (..), parseNixFileLoc)
 import           Update.Nix.FetchGit.Prefetch
@@ -25,18 +25,37 @@ import           Update.Span
 -- all the parts of the file we want to update.
 updatesFromFile :: FilePath -> IO (Either Warning [SpanUpdate])
 updatesFromFile f =
-  parseNixFileLoc f >>= \case
-    Failure parseError -> pure $ Left (CouldNotParseInput parseError)
-    Success expr -> case exprToFetchTree expr of
-      Left scanError -> pure (Left scanError)
-      Right treeWithArgs ->
-        sequenceA <$> mapConcurrently getFetchGitLatestInfo treeWithArgs >>= \case
-          Left getLatestInfoError -> pure $ Left getLatestInfoError
-          Right treeWithLatest -> pure $ return (fetchTreeToSpanUpdates treeWithLatest)
+  parseNixFileLoc' f `pr`
+  exprToFetchTree' `pr`
+  getFetchGitLatestInfo' `pr`
+  (pure . pure . fetchTreeToSpanUpdates)
 
 --------------------------------------------------------------------------------
 -- Extracting information about fetches from the AST
 --------------------------------------------------------------------------------
+
+pr :: IO (Either a b) -> (b -> IO (Either a c)) -> IO (Either a c)
+pr i f = do
+  e <- i
+  case e of
+    Left l -> pure (Left l)
+    Right r -> f r
+
+getFetchGitLatestInfo' ::
+  FetchTree FetchGitArgs ->
+  IO (Either Warning (FetchTree FetchGitLatestInfo))
+getFetchGitLatestInfo' treeWithArgs =
+  sequenceA <$> mapConcurrently getFetchGitLatestInfo treeWithArgs
+
+parseNixFileLoc' ::
+     FilePath -> IO (Either Warning NExprLoc)
+parseNixFileLoc' f =
+  parseNixFileLoc f >>= \case
+    Failure parseError -> pure $ Left (CouldNotParseInput parseError)
+    Success expr -> pure $ Right expr
+
+exprToFetchTree' :: NExprLoc -> IO (Either Warning (FetchTree FetchGitArgs))
+exprToFetchTree' = pure . exprToFetchTree
 
 -- Get a FetchTree from a nix expression.
 exprToFetchTree :: NExprLoc -> Either Warning (FetchTree FetchGitArgs)
