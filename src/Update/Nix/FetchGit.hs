@@ -24,28 +24,18 @@ import           Update.Span
 -- | Given the contents of a Nix file, returns the SpanUpdates
 -- all the parts of the file we want to update.
 updatesFromFile :: FilePath -> IO (Either Warning [SpanUpdate])
-updatesFromFile f =
-  parseNixFileLoc' f `pr`
-  exprToFetchTree' `pr`
-  getFetchGitLatestInfo' `pr`
-  (pure . pure . fetchTreeToSpanUpdates)
+updatesFromFile f = do
+   e1 <- parseNixFileLoc' f
+   e2 <- ioEither (pure . exprToFetchTree) e1
+   e3 <- ioEither
+     (\t -> sequenceA <$> mapConcurrently getFetchGitLatestInfo t) e2
+   ioEither (pure . pure . fetchTreeToSpanUpdates) e3
 
 --------------------------------------------------------------------------------
 -- Extracting information about fetches from the AST
 --------------------------------------------------------------------------------
-
-pr :: IO (Either a b) -> (b -> IO (Either a c)) -> IO (Either a c)
-pr i f = do
-  e <- i
-  case e of
-    Left l -> pure (Left l)
-    Right r -> f r
-
-getFetchGitLatestInfo' ::
-  FetchTree FetchGitArgs ->
-  IO (Either Warning (FetchTree FetchGitLatestInfo))
-getFetchGitLatestInfo' treeWithArgs =
-  sequenceA <$> mapConcurrently getFetchGitLatestInfo treeWithArgs
+ioEither :: (b -> IO (Either a b1)) -> Either a b -> IO (Either a b1)
+ioEither = either (pure . Left)
 
 parseNixFileLoc' ::
      FilePath -> IO (Either Warning NExprLoc)
@@ -53,9 +43,6 @@ parseNixFileLoc' f =
   parseNixFileLoc f >>= \case
     Failure parseError -> pure $ Left (CouldNotParseInput parseError)
     Success expr -> pure $ Right expr
-
-exprToFetchTree' :: NExprLoc -> IO (Either Warning (FetchTree FetchGitArgs))
-exprToFetchTree' = pure . exprToFetchTree
 
 -- Get a FetchTree from a nix expression.
 exprToFetchTree :: NExprLoc -> Either Warning (FetchTree FetchGitArgs)
