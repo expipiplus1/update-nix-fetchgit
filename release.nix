@@ -1,33 +1,22 @@
 { src ? { outPath = ./.; revCount = 0; gitTag = "dirty"; }
-, supportedPlatforms ? [ "x86_64-linux" "x86_64-darwin" ]
-, supportedCompilers ? [ "ghc7103" ]
 }:
 
-with (import <nixpkgs> {}).lib;
-
 let
-  hnixSrc = (import <nixpkgs> {}).fetchFromGitHub{
-    owner = "expipiplus1";
+  pkgs = import <nixpkgs> { };
+
+  hnixSrc = pkgs.fetchFromGitHub{
+    owner = "jwiegley";
     repo = "hnix";
-    rev = "a19a943f9b2b0f937c6fc6ce309bf425659133c9";
+    rev = "e2b80391bb731c80995a3a7f2dc0df6685c643c6";
     sha256 = "0wxv5gmq7w3j8rzs000hskmbvdizcrhf44vpjw2xja519a4fz2r8";
   };
 
+  baseHaskellPackages = pkgs.haskellPackages;
+
+  haskellPackages = baseHaskellPackages.override {
+    overrides = self: super: {
+      hnix = self.callPackage (hnixSrc + "/project.nix") { };
+    };
+  };
 in
-
-genAttrs supportedCompilers (ghcVer:
-  genAttrs supportedPlatforms (system:
-    let
-      pkgs = import <nixpkgs> { inherit system; };
-
-      baseHaskellPackages = getAttrFromPath ["haskell" "packages" ghcVer] pkgs;
-
-      haskellPackages = baseHaskellPackages.override {
-        overrides = self: super: {
-          hnix = self.callPackage hnixSrc {compiler = ghcVer; };
-        };
-      };
-    in
-      haskellPackages.callPackage src {}
-  )
-)
+  haskellPackages.callPackage src {}
