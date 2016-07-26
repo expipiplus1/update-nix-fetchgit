@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
@@ -51,13 +50,13 @@ exprSpan expr = SourceSpan (deltaToSourcePos begin) (deltaToSourcePos end)
 
 -- | Go from a 'Delta' to a 'SourcePos'.
 deltaToSourcePos :: Delta -> SourcePos
-deltaToSourcePos delta = (SourcePos line column)
+deltaToSourcePos delta = SourcePos line column
                  where (Directed _ line column _ _) = delta
 
 -- | Extract a named attribute from an attrset.
 extractAttr :: Text -> [Binding a] -> Either Warning a
 extractAttr name bs = case catMaybes (matchAttr name <$> bs) of
-  [x] -> Right x
+  [x] -> pure x
   []  -> Left (MissingAttr name)
   _   -> Left (DuplicateAttrs name)
 
@@ -65,8 +64,8 @@ extractAttr name bs = case catMaybes (matchAttr name <$> bs) of
 -- the case when a missing attribute is not an error.
 findAttr :: Text -> [Binding a] -> Either Warning (Maybe a)
 findAttr name bs = case catMaybes (matchAttr name <$> bs) of
-  [x] -> Right (Just x)
-  []  -> Right Nothing
+  [x] -> pure (Just x)
+  []  -> pure Nothing
   _   -> Left (DuplicateAttrs name)
 
 -- | Returns 'Just value' if this attribute's key matches the text, otherwise
@@ -80,7 +79,7 @@ matchAttr t = \case
 -- Takes an ISO 8601 date and returns just the day portion.
 parseISO8601DateToDay :: Text -> Either Warning Day
 parseISO8601DateToDay t =
-  let justDate = (unpack . Prelude.head . (splitOn "T")) t in
+  let justDate = (unpack . Prelude.head . splitOn "T") t in
   case parseTimeM False defaultTimeLocale "%Y-%m-%d" justDate of
     Nothing -> Left $ InvalidDateString t
-    Just day -> return day
+    Just day -> pure day
