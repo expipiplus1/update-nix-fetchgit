@@ -49,7 +49,7 @@ updateSpans us t =
       anyOverlap = any (uncurry overlaps)
                        (zip <*> tail $ spanUpdateSpan <$> sortedSpans)
   in
-    assert (anyOverlap == False)
+    assert (not anyOverlap)
     (foldr updateSpan t sortedSpans)
 
 -- | Update a single span of characters inside a text value. If you're updating
