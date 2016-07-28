@@ -6,6 +6,7 @@ module Update.Nix.FetchGit
   ) where
 
 import           Control.Concurrent.Async     (mapConcurrently)
+import           Control.Error
 import           Data.Foldable                (toList)
 import           Data.Generics.Uniplate.Data
 import           Data.Text                    (pack)
@@ -15,7 +16,6 @@ import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
-import           Control.Error
 
 --------------------------------------------------------------------------------
 -- Tying it all together
