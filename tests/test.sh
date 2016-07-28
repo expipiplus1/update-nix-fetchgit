@@ -96,11 +96,10 @@ function run_test_suite() {
     test_successful_update $test_name
   done
 
-  for f in *.error.nix; do
-    echo $f
-    local test_name=$(basename $f .error.nix)
-    test_error $test_name
-  done
+  #for f in *.error.nix; do
+  #  local test_name=$(basename $f .error.nix)
+  #  test_error $test_name
+  #done
 
   echo
   echo "All tests passed."
