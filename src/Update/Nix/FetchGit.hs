@@ -98,9 +98,7 @@ fetchTreeToSpanUpdates (FetchNode f) = [revUpdate, sha256Update]
 -- updated.  We basically just take the maximum latest commit date of
 -- all the fetches in the children.
 maybeUpdateVersion :: FetchTree FetchGitLatestInfo -> Maybe SpanUpdate
-maybeUpdateVersion node@(Node (Just versionExpr) _) =
-  case (fmap latestDate . universeBi) node of
-    [] -> Nothing
-    days -> Just $ SpanUpdate (exprSpan versionExpr)
-                              ((quoteString . pack . show . maximum) days)
+maybeUpdateVersion node@(Node (Just versionExpr) _) = do
+  maxDay <- (maximumMay . fmap latestDate . universeBi) node
+  pure $ SpanUpdate (exprSpan versionExpr) ((quoteString . pack . show) maxDay)
 maybeUpdateVersion _ = Nothing
