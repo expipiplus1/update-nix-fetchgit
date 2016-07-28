@@ -4,6 +4,7 @@
 
 module Update.Nix.FetchGit.Utils
   ( RepoLocation(..)
+  , ourParseNixFile
   , extractUrlString
   , quoteString
   , extractAttr
@@ -17,10 +18,17 @@ import           Data.Maybe                  (catMaybes)
 import           Data.Monoid                 ((<>))
 import           Data.Text                   (Text, unpack, splitOn)
 import           Data.Time                   (parseTimeM, defaultTimeLocale)
+import           Nix.Parser                  (parseNixFileLoc, Result(..))
 import           Nix.Expr
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
+
+ourParseNixFile :: FilePath -> IO (Either Warning NExprLoc)
+ourParseNixFile f =
+  parseNixFileLoc f >>= \case
+    Failure parseError -> pure $ Left (CouldNotParseInput parseError)
+    Success expr -> pure $ pure expr
 
 -- | Get the url from either a nix expression for the url or a repo and owner
 -- expression.

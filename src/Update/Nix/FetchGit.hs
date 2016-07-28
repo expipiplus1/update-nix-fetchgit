@@ -10,7 +10,6 @@ import           Data.Foldable                (toList)
 import           Data.Generics.Uniplate.Data
 import           Data.Text                    (pack)
 import           Nix.Expr
-import           Nix.Parser                   (Result (..), parseNixFileLoc)
 import           Update.Nix.FetchGit.Prefetch
 import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Types
@@ -22,30 +21,20 @@ import           Control.Error
 -- Tying it all together
 --------------------------------------------------------------------------------
 
-updatesFromFile :: FilePath -> IO (Either Warning [SpanUpdate])
-updatesFromFile f = (runExceptT . updatesFromFile') f
-
 -- | Given the contents of a Nix file, returns the SpanUpdates
 -- all the parts of the file we want to update.
-updatesFromFile' :: FilePath -> ExceptT Warning IO [SpanUpdate]
-updatesFromFile' f = do
-  expr <- parseNixFileLoc' f
-  treeWithArgs <- hoistEither (exprToFetchTree expr)
-  treeWithLatest <- ExceptT
-    (sequenceA <$> mapConcurrently (runExceptT . getFetchGitLatestInfo) treeWithArgs)
-  return (fetchTreeToSpanUpdates treeWithLatest)
+updatesFromFile :: FilePath -> IO (Either Warning [SpanUpdate])
+updatesFromFile f = runExceptT $ do
+  expr <- ExceptT $ ourParseNixFile f
+  treeWithArgs <- hoistEither $ exprToFetchTree expr
+  treeWithLatest <- ExceptT $
+    sequenceA <$> mapConcurrently getFetchGitLatestInfo treeWithArgs
+  pure (fetchTreeToSpanUpdates treeWithLatest)
 
 
 --------------------------------------------------------------------------------
 -- Extracting information about fetches from the AST
 --------------------------------------------------------------------------------
-
-parseNixFileLoc' ::
-     FilePath -> ExceptT Warning IO NExprLoc
-parseNixFileLoc' f =
-  parseNixFileLoc f >>= \case
-    Failure parseError -> throwE (CouldNotParseInput parseError)
-    Success expr -> pure expr
 
 -- Get a FetchTree from a nix expression.
 exprToFetchTree :: NExprLoc -> Either Warning (FetchTree FetchGitArgs)
@@ -83,8 +72,8 @@ extractFetchGitArgs = \case
 -- Getting updated information from the internet.
 --------------------------------------------------------------------------------
 
-getFetchGitLatestInfo :: FetchGitArgs -> ExceptT Warning IO FetchGitLatestInfo
-getFetchGitLatestInfo args = do
+getFetchGitLatestInfo :: FetchGitArgs -> IO (Either Warning FetchGitLatestInfo)
+getFetchGitLatestInfo args = runExceptT $ do
   o <- ExceptT (nixPrefetchGit (extractUrlString $ repoLocation args))
   d <- hoistEither (parseISO8601DateToDay (date o))
   pure $ FetchGitLatestInfo args (rev o) (sha256 o) d
