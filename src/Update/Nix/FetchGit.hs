@@ -93,14 +93,14 @@ fetchTreeToSpanUpdates (FetchNode f) = [revUpdate, sha256Update]
                                   (quoteString (latestSha256 f))
         args = originalInfo f
 
--- Given a Nix expression representing a version value, and the
--- children of the node that contains it, decides whether and how that
--- version string should be updated.  We basically just take the
--- maximum latest commit date of all the fetches in the children.
+-- Given a node of the fetch tree which might contain a version
+-- string, decides whether and how that version string should be
+-- updated.  We basically just take the maximum latest commit date of
+-- all the fetches in the children.
 maybeUpdateVersion :: FetchTree FetchGitLatestInfo -> Maybe SpanUpdate
-maybeUpdateVersion (Node Nothing _) = Nothing
 maybeUpdateVersion node@(Node (Just versionExpr) _) =
   case (fmap latestDate . universeBi) node of
     [] -> Nothing
     days -> Just $ SpanUpdate (exprSpan versionExpr)
                               ((quoteString . pack . show . maximum) days)
+maybeUpdateVersion _ = Nothing
