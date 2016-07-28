@@ -8,7 +8,7 @@ module Update.Nix.FetchGit
 import           Control.Concurrent.Async     (mapConcurrently)
 import           Data.Foldable                (toList)
 import           Data.Generics.Uniplate.Data
-import           Data.Text                    (Text, pack)
+import           Data.Text                    (pack)
 import           Nix.Expr
 import           Nix.Parser                   (Result (..), parseNixFileLoc)
 import           Update.Nix.FetchGit.Prefetch
@@ -16,27 +16,36 @@ import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
+import           Control.Error
 
 --------------------------------------------------------------------------------
 -- Tying it all together
 --------------------------------------------------------------------------------
 
+updatesFromFile :: FilePath -> IO (Either Warning [SpanUpdate])
+updatesFromFile f = (runExceptT . updatesFromFile') f
+
 -- | Given the contents of a Nix file, returns the SpanUpdates
 -- all the parts of the file we want to update.
-updatesFromFile :: FilePath -> IO (Either Warning [SpanUpdate])
-updatesFromFile f =
-  parseNixFileLoc f >>= \case
-    Failure parseError -> pure $ Left (CouldNotParseInput parseError)
-    Success expr -> case exprToFetchTree expr of
-      Left scanError -> pure (Left scanError)
-      Right treeWithArgs ->
-        sequenceA <$> mapConcurrently getFetchGitLatestInfo treeWithArgs >>= \case
-          Left getLatestInfoError -> pure $ Left getLatestInfoError
-          Right treeWithLatest -> pure $ pure $ fetchTreeToSpanUpdates treeWithLatest
+updatesFromFile' :: FilePath -> ExceptT Warning IO [SpanUpdate]
+updatesFromFile' f = do
+  expr <- parseNixFileLoc' f
+  treeWithArgs <- hoistEither (exprToFetchTree expr)
+  treeWithLatest <- ExceptT
+    (sequenceA <$> mapConcurrently (runExceptT . getFetchGitLatestInfo) treeWithArgs)
+  return (fetchTreeToSpanUpdates treeWithLatest)
+
 
 --------------------------------------------------------------------------------
 -- Extracting information about fetches from the AST
 --------------------------------------------------------------------------------
+
+parseNixFileLoc' ::
+     FilePath -> ExceptT Warning IO NExprLoc
+parseNixFileLoc' f =
+  parseNixFileLoc f >>= \case
+    Failure parseError -> throwE (CouldNotParseInput parseError)
+    Success expr -> pure expr
 
 -- Get a FetchTree from a nix expression.
 exprToFetchTree :: NExprLoc -> Either Warning (FetchTree FetchGitArgs)
@@ -74,13 +83,11 @@ extractFetchGitArgs = \case
 -- Getting updated information from the internet.
 --------------------------------------------------------------------------------
 
-getFetchGitLatestInfo :: FetchGitArgs -> IO (Either Warning FetchGitLatestInfo)
+getFetchGitLatestInfo :: FetchGitArgs -> ExceptT Warning IO FetchGitLatestInfo
 getFetchGitLatestInfo args = do
-  result <- nixPrefetchGit (extractUrlString $ repoLocation args)
-  pure $ case result of
-    Left e -> Left e
-    Right o -> FetchGitLatestInfo args (rev o) (sha256 o)
-                                  <$> parseISO8601DateToDay (date o)
+  o <- ExceptT (nixPrefetchGit (extractUrlString $ repoLocation args))
+  d <- hoistEither (parseISO8601DateToDay (date o))
+  pure $ FetchGitLatestInfo args (rev o) (sha256 o) d
 
 --------------------------------------------------------------------------------
 -- Deciding which parts of the Nix file should be updated and how.

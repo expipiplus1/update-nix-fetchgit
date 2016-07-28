@@ -1,6 +1,6 @@
 { mkDerivation, aeson, ansi-wl-pprint, async, base, bytestring
 , data-fix, hnix, process, stdenv, text, time, transformers, uniplate
-, utf8-string
+, utf8-string, errors
 }:
 mkDerivation {
   pname = "update-nix-fetchgit";
@@ -10,7 +10,7 @@ mkDerivation {
   isExecutable = true;
   libraryHaskellDepends = [
     aeson async base bytestring data-fix hnix process text time transformers
-    uniplate utf8-string
+    uniplate utf8-string errors
   ];
   executableHaskellDepends = [ ansi-wl-pprint base hnix text ];
   testHaskellDepends = [ base ];
