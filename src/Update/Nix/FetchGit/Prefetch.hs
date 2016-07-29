@@ -20,6 +20,7 @@ import           Update.Nix.FetchGit.Warning
 data NixPrefetchGitOutput = NixPrefetchGitOutput{ url    :: Text
                                                 , rev    :: Text
                                                 , sha256 :: Text
+                                                , date   :: Text
                                                 }
   deriving (Show, Generic, FromJSON)
 
@@ -27,18 +28,12 @@ data NixPrefetchGitOutput = NixPrefetchGitOutput{ url    :: Text
 nixPrefetchGit :: Text -- ^ The URL to prefetch
                -> IO (Either Warning NixPrefetchGitOutput)
 nixPrefetchGit prefetchURL = do
-  let nixPrefetchCommand = "nix-prefetch-git " ++ unpack prefetchURL
-      nixShellArgs = [ "-p", "nix-prefetch-git"
-                     , "-p", "nix"
-                     , "--command", nixPrefetchCommand
-                     ]
-      nsStdin = ""
   (exitCode, nsStdout, nsStderr) <-
-    readProcessWithExitCode "nix-shell" nixShellArgs nsStdin
+    readProcessWithExitCode "nix-prefetch-git" [unpack prefetchURL] ""
   hPutStrLn stderr nsStderr
   pure $ case exitCode of
-    ExitSuccess   ->
+    ExitFailure e -> Left (NixPrefetchGitFailed e)
+    ExitSuccess ->
       case decode (fromString nsStdout) of
         Nothing -> Left (InvalidPrefetchGitOutput (pack nsStdout))
-        Just o  -> Right o
-    ExitFailure e -> Left (NixShellFailed e)
+        Just o -> Right o
