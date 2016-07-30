@@ -30,7 +30,7 @@ nixPrefetchGit :: Text -- ^ The URL to prefetch
 nixPrefetchGit prefetchURL = runExceptT $ do
   (exitCode, nsStdout, nsStderr) <- ExceptT $ do
     x <- readProcessWithExitCode "nix-prefetch-git" [unpack prefetchURL] ""
-    pure $ Right x
+    pure $ pure x
   hoistEither $ case exitCode of
     ExitFailure e -> Left (NixPrefetchGitFailed e (pack nsStderr))
     ExitSuccess -> pure ()
