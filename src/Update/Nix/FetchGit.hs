@@ -47,9 +47,9 @@ exprToFetchTreeCore e subs =
   case e of
     -- If it is a call (application) of fetchgit, record the
     -- arguments since we will need to update them.
-    AnnE _ (NApp (AnnE _ (NSym fg)) a)
+    AnnE _ (NApp (AnnE _ (NSym fg)) (AnnE _ (NSet bindings)))
       | fg `elem` ["fetchgit", "fetchgitPrivate"]
-      -> FetchNode <$> extractFetchGitArgs a
+      -> FetchNode <$> extractFetchGitArgs bindings
 
     -- If it is an attribute set, find any attributes in it that we
     -- might want to update.
@@ -60,13 +60,11 @@ exprToFetchTreeCore e subs =
     _ -> Node Nothing <$> sequenceA subs
 
 -- | Extract a 'FetchGitArgs' from the attrset being passed to fetchgit.
-extractFetchGitArgs :: NExprLoc -> Either Warning FetchGitArgs
-extractFetchGitArgs = \case
-  AnnE _ (NSet bindings) ->
+extractFetchGitArgs :: [Binding NExprLoc] -> Either Warning FetchGitArgs
+extractFetchGitArgs bindings =
     FetchGitArgs <$> (URL <$> (exprText =<< extractAttr "url" bindings))
                  <*> extractAttr "rev" bindings
                  <*> extractAttr "sha256" bindings
-  e -> Left (ArgNotASet e)
 
 --------------------------------------------------------------------------------
 -- Getting updated information from the internet.
