@@ -11,6 +11,7 @@ module Update.Span
   , updateSpan
   , updateSpans
   , linearizeSourcePos
+  , prettyPrintSourcePos
   ) where
 
 import           Control.Exception (assert)
@@ -80,3 +81,7 @@ linearizeSourcePos :: Text -- ^ The string to linearize in
                    -> Int64 -- ^ The character offset
 linearizeSourcePos t l c = fromIntegral lineCharOffset + c
    where lineCharOffset = sum . fmap ((+1) . length) . genericTake l . lines $ t
+
+prettyPrintSourcePos :: SourcePos -> String
+prettyPrintSourcePos (SourcePos row column) =
+  "line " <> show row <> " column " <> show column

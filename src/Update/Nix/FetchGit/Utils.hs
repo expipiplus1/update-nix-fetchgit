@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Update.Nix.FetchGit.Utils
   ( RepoLocation(..)
@@ -91,3 +92,21 @@ parseISO8601DateToDay t =
   case parseTimeM False defaultTimeLocale "%Y-%m-%d" justDate of
     Nothing -> Left $ InvalidDateString t
     Just day -> pure day
+
+instance Show Warning where
+  show (CouldNotParseInput doc) = show doc
+  show (MissingAttr attrName) =
+    "Error: The \"" <> unpack attrName <> "\" attribute is missing."
+  show (DuplicateAttrs attrName) =
+    "Error: The \"" <> unpack attrName <> "\" attribute appears twice in a set."
+  show (NotAString expr) =
+    "Error: The expression at "
+    <> (prettyPrintSourcePos . sourceSpanBegin . exprSpan) expr
+    <> " is not a string literal."
+  show (NixPrefetchGitFailed exitCode errorOutput) =
+    "Error: nix-prefetch-git failed with exit code " <> show exitCode
+    <> " and error output:\n" <> unpack errorOutput
+  show (InvalidPrefetchGitOutput output) =
+    "Error: Output from nix-prefetch-git is invalid:\n" <> show output
+  show (InvalidDateString text) =
+    "Error: Date string is invalid: " <> show text
