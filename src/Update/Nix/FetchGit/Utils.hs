@@ -15,6 +15,7 @@ module Update.Nix.FetchGit.Utils
   , parseISO8601DateToDay
   ) where
 
+import           Data.Generics.Uniplate.Data
 import           Data.Maybe                  (catMaybes)
 import           Data.Monoid                 ((<>))
 import           Data.Text                   (Text, unpack, splitOn)
@@ -29,14 +30,22 @@ ourParseNixFile :: FilePath -> IO (Either Warning NExprLoc)
 ourParseNixFile f =
   parseNixFileLoc f >>= \case
     Failure parseError -> pure $ Left (CouldNotParseInput parseError)
-    Success expr -> pure $ pure expr
+    Success expr -> pure $ pure $ fixNixSets expr
+
+-- Convert all NRecSet values (recursive sets) to NSet values because
+-- we do not care about the distinction between NRecSet and NSet and
+-- we want our program to treat both types equally.
+fixNixSets :: NExprLoc -> NExprLoc
+fixNixSets = transform fix
+  where fix (AnnE s (NRecSet bindings)) = (AnnE s (NSet bindings))
+        fix n = n
 
 -- | Get the url from either a nix expression for the url or a repo and owner
 -- expression.
 extractUrlString :: RepoLocation -> Text
 extractUrlString = \case
   URL u -> u
-  GitHub owner repo -> "https://github.com/" <> owner <> "/" <> repo <> ".git"
+  GitHub o r -> "https://github.com/" <> o <> "/" <> r <> ".git"
 
 -- Add double quotes around a string so it can be inserted into a Nix
 -- file as a string literal.
