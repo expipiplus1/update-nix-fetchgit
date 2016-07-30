@@ -31,7 +31,6 @@ updatesFromFile f = runExceptT $ do
     sequenceA <$> mapConcurrently getFetchGitLatestInfo treeWithArgs
   pure (fetchTreeToSpanUpdates treeWithLatest)
 
-
 --------------------------------------------------------------------------------
 -- Extracting information about fetches from the AST
 --------------------------------------------------------------------------------
@@ -51,6 +50,11 @@ exprToFetchTreeCore e subs =
       | fg `elem` ["fetchgit", "fetchgitPrivate"]
       -> FetchNode <$> extractFetchGitArgs bindings
 
+    -- Similarly, record calls to fetchFromGitHub.
+    AnnE _ (NApp (AnnE _ (NSym fg)) (AnnE _ (NSet bindings)))
+      | fg == "fetchFromGitHub"
+      -> FetchNode <$> extractFetchFromGitHubArgs bindings
+
     -- If it is an attribute set, find any attributes in it that we
     -- might want to update.
     AnnE _ (NSet bindings)
@@ -63,6 +67,14 @@ exprToFetchTreeCore e subs =
 extractFetchGitArgs :: [Binding NExprLoc] -> Either Warning FetchGitArgs
 extractFetchGitArgs bindings =
     FetchGitArgs <$> (URL <$> (exprText =<< extractAttr "url" bindings))
+                 <*> extractAttr "rev" bindings
+                 <*> extractAttr "sha256" bindings
+
+-- | Extract a 'FetchGitArgs' from the attrset being passed to fetchFromGitHub.
+extractFetchFromGitHubArgs :: [Binding NExprLoc] -> Either Warning FetchGitArgs
+extractFetchFromGitHubArgs bindings =
+    FetchGitArgs <$> (GitHub <$> (exprText =<< extractAttr "owner" bindings)
+                             <*> (exprText =<< extractAttr "repo" bindings))
                  <*> extractAttr "rev" bindings
                  <*> extractAttr "sha256" bindings
 

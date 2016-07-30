@@ -36,7 +36,7 @@ ourParseNixFile f =
 extractUrlString :: RepoLocation -> Text
 extractUrlString = \case
   URL u -> u
-  GitHub o r -> "git@github.com:" <> o <> "/" <> r <> ".git"
+  GitHub owner repo -> "https://github.com/" <> owner <> "/" <> repo <> ".git"
 
 -- Add double quotes around a string so it can be inserted into a Nix
 -- file as a string literal.
