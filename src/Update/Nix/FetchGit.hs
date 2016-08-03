@@ -37,31 +37,25 @@ updatesFromFile f = runExceptT $ do
 
 -- Get a FetchTree from a nix expression.
 exprToFetchTree :: NExprLoc -> Either Warning (FetchTree FetchGitArgs)
-exprToFetchTree = para exprToFetchTreeCore
+exprToFetchTree = para $ \e subs -> case e of
+  -- If it is a call (application) of fetchgit, record the
+  -- arguments since we will need to update them.
+  AnnE _ (NApp (AnnE _ (NSym fg)) (AnnE _ (NSet bindings)))
+    | fg `elem` ["fetchgit", "fetchgitPrivate"]
+    -> FetchNode <$> extractFetchGitArgs bindings
 
-exprToFetchTreeCore :: NExprLoc
-                    -> [Either Warning (FetchTree FetchGitArgs)]
-                    -> Either Warning (FetchTree FetchGitArgs)
-exprToFetchTreeCore e subs =
-  case e of
-    -- If it is a call (application) of fetchgit, record the
-    -- arguments since we will need to update them.
-    AnnE _ (NApp (AnnE _ (NSym fg)) (AnnE _ (NSet bindings)))
-      | fg `elem` ["fetchgit", "fetchgitPrivate"]
-      -> FetchNode <$> extractFetchGitArgs bindings
+  -- Similarly, record calls to fetchFromGitHub.
+  AnnE _ (NApp (AnnE _ (NSym fg)) (AnnE _ (NSet bindings)))
+    | fg == "fetchFromGitHub"
+    -> FetchNode <$> extractFetchFromGitHubArgs bindings
 
-    -- Similarly, record calls to fetchFromGitHub.
-    AnnE _ (NApp (AnnE _ (NSym fg)) (AnnE _ (NSet bindings)))
-      | fg == "fetchFromGitHub"
-      -> FetchNode <$> extractFetchFromGitHubArgs bindings
+  -- If it is an attribute set, find any attributes in it that we
+  -- might want to update.
+  AnnE _ (NSet bindings)
+    -> Node <$> findAttr "version" bindings <*> sequenceA subs
 
-    -- If it is an attribute set, find any attributes in it that we
-    -- might want to update.
-    AnnE _ (NSet bindings)
-      -> Node <$> findAttr "version" bindings <*> sequenceA subs
-
-    -- If this is something uninteresting, just wrap the sub-trees.
-    _ -> Node Nothing <$> sequenceA subs
+  -- If this is something uninteresting, just wrap the sub-trees.
+  _ -> Node Nothing <$> sequenceA subs
 
 -- | Extract a 'FetchGitArgs' from the attrset being passed to fetchgit.
 extractFetchGitArgs :: [Binding NExprLoc] -> Either Warning FetchGitArgs
