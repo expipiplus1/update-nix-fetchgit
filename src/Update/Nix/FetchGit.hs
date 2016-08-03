@@ -1,5 +1,5 @@
-{-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Update.Nix.FetchGit
   ( updatesFromFile
@@ -14,8 +14,8 @@ import           Nix.Expr
 import           Nix.Parser                   (Result (..), parseNixTextLoc)
 import           Text.Trifecta.Result         (_errDoc)
 import           Update.Nix.FetchGit.Prefetch
-import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Types
+import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
 
