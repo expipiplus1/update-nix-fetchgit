@@ -37,7 +37,7 @@ ourParseNixFile f =
 -- we want our program to treat both types equally.
 fixNixSets :: NExprLoc -> NExprLoc
 fixNixSets = transform fix
-  where fix (AnnE s (NRecSet bindings)) = (AnnE s (NSet bindings))
+  where fix (AnnE s (NRecSet bindings)) = AnnE s (NSet bindings)
         fix n = n
 
 -- | Get the url from either a nix expression for the url or a repo and owner
