@@ -34,6 +34,4 @@ nixPrefetchGit prefetchURL = runExceptT $ do
   hoistEither $ case exitCode of
     ExitFailure e -> Left (NixPrefetchGitFailed e (pack nsStderr))
     ExitSuccess -> pure ()
-  hoistEither $ case decode (fromString nsStdout) of
-    Nothing -> Left (InvalidPrefetchGitOutput (pack nsStdout))
-    Just output -> pure output
+  decode (fromString nsStdout) ?? InvalidPrefetchGitOutput (pack nsStdout)
