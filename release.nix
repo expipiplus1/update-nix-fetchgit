@@ -4,12 +4,14 @@
 }:
 
 let
-  pkgs = import ((import <nixpkgs> {}).fetchFromGitHub{
+  nixpkgsSrc = (import <nixpkgs> {}).fetchFromGitHub{
     owner = "NixOS";
     repo = "nixpkgs";
-    rev = "49ad8ce561d2c6ae45a178cb431b87ca2b07fb8b";
-    sha256 = "1n2md7xif8q0qbzh8766sfc4mi4hyhk04rqp7q3gfvki7nyjkjw5";
-  }) {};
+    rev = "199f5a2844cb31be96872599d8db7105b572f116";
+    sha256 = "0q4d1fxi98m4mial192247clhpk4y149zwgd2vk6gz9710vyxdck";
+  };
+
+  pkgs = import nixpkgsSrc {};
 
   hnixSrc = pkgs.fetchFromGitHub{
     owner = "jwiegley";
@@ -31,7 +33,7 @@ with pkgs.lib;
 genAttrs supportedCompilers (ghcVer:
   genAttrs supportedPlatforms (system:
     let
-      pkgs = import <nixpkgs> { inherit system; };
+      pkgs = import nixpkgsSrc { inherit system; };
 
       baseHaskellPackages = getAttrFromPath ["haskell" "packages" ghcVer] pkgs;
 
