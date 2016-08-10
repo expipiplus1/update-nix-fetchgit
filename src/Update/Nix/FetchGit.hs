@@ -1,5 +1,5 @@
-{-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Update.Nix.FetchGit
   ( updatesFromFile
@@ -12,9 +12,10 @@ import           Data.Text                    (pack)
 import qualified Data.Text.IO                 as T
 import           Nix.Expr
 import           Nix.Parser                   (Result (..), parseNixTextLoc)
+import           Text.Trifecta.Result         (_errDoc)
 import           Update.Nix.FetchGit.Prefetch
-import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Types
+import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
 
@@ -27,7 +28,7 @@ updatesFromFile :: FilePath -> IO (Either Warning [SpanUpdate])
 updatesFromFile filename = do
   t <- T.readFile filename
   case parseNixTextLoc t of
-    Failure parseError -> pure $ Left (CouldNotParseInput parseError)
+    Failure parseError -> pure $ Left (CouldNotParseInput (_errDoc parseError))
     Success expr -> case exprToFetchTree expr of
       Left scanError -> pure (Left scanError)
       Right treeWithArgs ->
@@ -103,6 +104,7 @@ fetchTreeToSpanUpdates (FetchNode f) = [revUpdate, sha256Update]
 -- version string should be updated.  We basically just take the
 -- maximum latest commit date of all the fetches in the children.
 maybeUpdateVersion :: FetchTree FetchGitLatestInfo -> Maybe SpanUpdate
+maybeUpdateVersion (FetchNode _)    = Nothing
 maybeUpdateVersion (Node Nothing _) = Nothing
 maybeUpdateVersion node@(Node (Just versionExpr) _) =
   case (fmap latestDate . universeBi) node of
