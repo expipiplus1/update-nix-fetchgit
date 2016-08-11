@@ -21,6 +21,7 @@ import           Data.Monoid                 ((<>))
 import           Data.Text                   (Text, unpack, splitOn)
 import           Data.Time                   (parseTimeM, defaultTimeLocale)
 import           Nix.Parser                  (parseNixFileLoc, Result(..))
+import           Text.Trifecta.Result        (_errDoc)
 import           Nix.Expr
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Warning
@@ -29,7 +30,7 @@ import           Update.Span
 ourParseNixFile :: FilePath -> IO (Either Warning NExprLoc)
 ourParseNixFile f =
   parseNixFileLoc f >>= \case
-    Failure parseError -> pure $ Left (CouldNotParseInput parseError)
+    Failure parseError -> pure $ Left (CouldNotParseInput (_errDoc parseError))
     Success expr -> pure $ pure $ fixNixSets expr
 
 -- Convert all NRecSet values (recursive sets) to NSet values because

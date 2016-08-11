@@ -1,22 +1,14 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveTraversable #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE DeriveTraversable  #-}
+{-# LANGUAGE FlexibleContexts   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Update.Nix.FetchGit.Types where
 
-import           Data.Data             (Data)
-import           Data.Functor.Compose
-import           Data.Text             (Text)
-import qualified Data.Time             (Day)
-import           Data.Typeable         (Typeable)
-import           Nix.Expr              (NExprLoc)
-
--- TODO: Remove when using base 4.9, necessary at the moment because Compose
--- doesn't have a data declaration
-deriving instance (Typeable f, Typeable g, Typeable a, Data (f (g a)))
-  => Data (Compose f g a)
+import           Data.Data (Data)
+import           Data.Text (Text)
+import qualified Data.Time (Day)
+import           Nix.Expr  (NExprLoc)
 
 -- | The day portion of a date, with no timezone information.
 type Day = Data.Time.Day
