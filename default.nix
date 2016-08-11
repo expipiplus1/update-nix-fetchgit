@@ -1,5 +1,5 @@
 { mkDerivation, aeson, ansi-wl-pprint, async, base, bytestring
-, data-fix, errors, hnix, process, stdenv, text, time, transformers,
+, data-fix, errors, hnix, process, stdenv, text, time, transformers
 , uniplate, utf8-string
 }:
 mkDerivation {
