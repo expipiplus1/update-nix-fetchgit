@@ -1,5 +1,5 @@
-{-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Update.Nix.FetchGit
   ( updatesFromFile
@@ -12,8 +12,8 @@ import           Data.Generics.Uniplate.Data
 import           Data.Text                    (pack)
 import           Nix.Expr
 import           Update.Nix.FetchGit.Prefetch
-import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Types
+import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
 
