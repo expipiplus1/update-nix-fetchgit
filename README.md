@@ -45,7 +45,7 @@ The `rev`, `sha256`, and `version` attributes will all be updated.
 
 # Building from source
 
-The recommended way to build this program from source for development purposes is to download run `nix-shell` in the top-level source directory and then run `cabal build`.
+The recommended way to build this program from source for development purposes is to download and run `nix-shell` in the top-level source directory and then run `cabal build`.
 
 
 # More documentation
