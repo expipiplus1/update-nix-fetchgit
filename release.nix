@@ -2,6 +2,8 @@
 }:
 
 let
+  # The last commit of nixpkgs known to work when imported here is
+  # c66ca712b9c4af60477b7582f73a14ab975ffda7 (2016-08-11).
   pkgs = import <nixpkgs> { };
 
   hnixSrc = pkgs.fetchFromGitHub {
