@@ -6,12 +6,13 @@ module Update.Nix.FetchGit.Prefetch
   , nixPrefetchGit
   ) where
 
+import           Control.Error
+import           Control.Monad.IO.Class      (liftIO)
 import           Data.Aeson                  (FromJSON, decode)
 import           Data.ByteString.Lazy.UTF8   (fromString)
 import           Data.Text
 import           GHC.Generics
 import           System.Exit                 (ExitCode (..))
-import           System.IO                   (hPutStrLn, stderr)
 import           System.Process              (readProcessWithExitCode)
 import           Update.Nix.FetchGit.Warning
 
@@ -27,13 +28,10 @@ data NixPrefetchGitOutput = NixPrefetchGitOutput{ url    :: Text
 -- | Run nix-prefetch-git
 nixPrefetchGit :: Text -- ^ The URL to prefetch
                -> IO (Either Warning NixPrefetchGitOutput)
-nixPrefetchGit prefetchURL = do
-  (exitCode, nsStdout, nsStderr) <-
+nixPrefetchGit prefetchURL = runExceptT $ do
+  (exitCode, nsStdout, nsStderr) <- liftIO $
     readProcessWithExitCode "nix-prefetch-git" [unpack prefetchURL] ""
-  hPutStrLn stderr nsStderr
-  pure $ case exitCode of
-    ExitFailure e -> Left (NixPrefetchGitFailed e)
-    ExitSuccess ->
-      case decode (fromString nsStdout) of
-        Nothing -> Left (InvalidPrefetchGitOutput (pack nsStdout))
-        Just o -> Right o
+  hoistEither $ case exitCode of
+    ExitFailure e -> Left (NixPrefetchGitFailed e (pack nsStderr))
+    ExitSuccess -> pure ()
+  decode (fromString nsStdout) ?? InvalidPrefetchGitOutput (pack nsStdout)

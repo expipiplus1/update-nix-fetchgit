@@ -7,12 +7,9 @@ import           Nix.Expr
 import           Text.PrettyPrint.ANSI.Leijen (Doc)
 
 data Warning = CouldNotParseInput Doc
-             | ArgNotASet NExprLoc
              | MissingAttr Text
              | DuplicateAttrs Text
              | NotAString NExprLoc
-             | BadSourcePos Delta
-             | NixPrefetchGitFailed Int
+             | NixPrefetchGitFailed Int Text
              | InvalidPrefetchGitOutput Text
              | InvalidDateString Text
-  deriving (Show)

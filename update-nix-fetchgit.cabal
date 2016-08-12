@@ -18,9 +18,9 @@ library
   exposed-modules:     Update.Nix.FetchGit
                      , Update.Span
                      , Update.Nix.FetchGit.Prefetch
-  other-modules:       Update.Nix.FetchGit.Warning
+                     , Update.Nix.FetchGit.Warning
                      , Update.Nix.FetchGit.Utils
-                     , Update.Nix.FetchGit.Types
+  other-modules:       Update.Nix.FetchGit.Types
   build-depends:       base >= 4.7 && < 5
                      , aeson >= 0.9 && < 0.12
                      , ansi-wl-pprint >= 0.6 && < 0.7
@@ -35,6 +35,7 @@ library
                      , trifecta >= 1.6 && < 1.7
                      , uniplate >= 1.6 && < 1.7
                      , utf8-string >= 1.0 && < 1.1
+                     , errors >= 2.1 && < 2.2
   default-language:    Haskell2010
   ghc-options: -Wall
 

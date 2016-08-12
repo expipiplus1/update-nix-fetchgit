@@ -1,5 +1,5 @@
 { mkDerivation, aeson, ansi-wl-pprint, async, base, bytestring
-, data-fix, hnix, process, stdenv, text, time, transformers
+, data-fix, errors, hnix, process, stdenv, text, time, transformers
 , uniplate, utf8-string
 }:
 mkDerivation {
@@ -9,8 +9,8 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    aeson ansi-wl-pprint async base bytestring data-fix hnix process
-    text time transformers uniplate utf8-string
+    aeson ansi-wl-pprint async base bytestring data-fix errors hnix
+    process text time transformers uniplate utf8-string
   ];
   executableHaskellDepends = [ base text ];
   homepage = "https://github.com/expipiplus1/update-nix-fetchgit#readme";

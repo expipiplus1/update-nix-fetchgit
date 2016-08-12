@@ -5,26 +5,34 @@ module Main where
 import           Data.Text.IO        (readFile, writeFile)
 import           Prelude             hiding (readFile, writeFile)
 import           System.Environment  (getArgs)
+import           System.Exit
 import           Update.Nix.FetchGit
+import           Update.Nix.FetchGit.Utils
+import           Update.Nix.FetchGit.Warning
 import           Update.Span
 
 main :: IO ()
 main =
   -- Super simple command line parsing at the moment, just look for one
-  -- filename
+  -- filename.
   getArgs >>= \case
-    [filename] ->
-      -- Get the updates from this file
+    [filename] -> do
+      t <- readFile filename
+      -- Get the updates from this file.
       updatesFromFile filename >>= \case
-        -- If we have any errors print them and finish
-        Left ws  -> print ws
-        Right us -> do
-          -- TODO: Avoid loading this file twice
-          t <- readFile filename
-          -- Try to update this text
+        -- If we have any errors, print them and finish.
+        Left ws -> printErrorAndExit ws
+        Right us ->
+          -- Update the text of the file in memory.
           case updateSpans us t of
-            Nothing -> putStrLn "Error: overlapping updates"
-            -- If it updated, write it out to the filename
-            Just t' -> writeFile filename t'
-    _ -> putStrLn "Usage: update-nix-fetchgit filename"
+            -- If updates are needed, write to the file.
+            t' | t' /= t -> writeFile filename t'
+            _ -> return ()
+    _ -> do
+      putStrLn "Usage: update-nix-fetchgit filename"
+      exitWith (ExitFailure 1)
 
+printErrorAndExit :: Warning -> IO ()
+printErrorAndExit e = do
+  print (formatWarning e)
+  exitWith (ExitFailure 1)

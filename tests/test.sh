@@ -59,20 +59,25 @@ function error {
   exit 1
 }
 
+function test_successful_update() {
+  local test_name="$1"
+  cp $test_name.in.nix $test_name.out.nix
+  echo "$test_name: Starting."
+  if ! "$updater" $test_name.out.nix; then
+      error "$test_name: Error running the updater."
+  fi
+  if ! diff $test_name.expected.nix $test_name.out.nix; then
+      error "$test_name: Incorrect output."
+  fi
+  echo "$test_name: Passed."
+}
+
 function run_test_suite() {
   prepare_local_test_repos > /dev/null
 
-  for input in *.in.nix; do
-    local test_name=$(basename $input .in.nix)
-    cp $test_name.in.nix $test_name.out.nix
-    echo "$test_name: Starting."
-    if ! "$updater" $test_name.out.nix; then
-        error "$test_name: Error running the updater."
-    fi
-    if ! diff $test_name.expected.nix $test_name.out.nix; then
-        error "$test_name: Incorrect output."
-    fi
-    echo "$test_name: Passed."
+  for f in *.expected.nix; do
+    local test_name=$(basename $f .expected.nix)
+    test_successful_update $test_name
   done
 
   echo

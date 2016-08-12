@@ -11,8 +11,10 @@ module Update.Span
   , updateSpan
   , updateSpans
   , linearizeSourcePos
+  , prettyPrintSourcePos
   ) where
 
+import           Control.Exception (assert)
 import           Data.Data   (Data)
 import           Data.Int    (Int64)
 import           Data.List   (genericTake, sortOn)
@@ -41,19 +43,15 @@ data SpanUpdate = SpanUpdate{ spanUpdateSpan     :: SourceSpan
                             }
   deriving (Show, Data)
 
--- | Update many spans in a file. This function returns 'Nothing' if the spans
--- overlap.
---
--- We use updateSpan to update the spans in reverse order (starting
--- with the ones at the end of the file).
-updateSpans :: [SpanUpdate] -> Text -> Maybe Text
+-- | Update many spans in a file. They must be non-overlapping.
+updateSpans :: [SpanUpdate] -> Text -> Text
 updateSpans us t =
   let sortedSpans = sortOn (sourceSpanBegin . spanUpdateSpan) us
       anyOverlap = any (uncurry overlaps)
                        (zip <*> tail $ spanUpdateSpan <$> sortedSpans)
-  in if anyOverlap
-       then Nothing
-       else Just (foldr updateSpan t sortedSpans)
+  in
+    assert (not anyOverlap)
+    (foldr updateSpan t sortedSpans)
 
 -- | Update a single span of characters inside a text value. If you're updating
 -- multiples spans it's best to use 'updateSpans'.
@@ -83,3 +81,7 @@ linearizeSourcePos :: Text -- ^ The string to linearize in
                    -> Int64 -- ^ The character offset
 linearizeSourcePos t l c = fromIntegral lineCharOffset + c
    where lineCharOffset = sum . fmap ((+1) . length) . genericTake l . lines $ t
+
+prettyPrintSourcePos :: SourcePos -> String
+prettyPrintSourcePos (SourcePos row column) =
+  "line " <> show row <> " column " <> show column
