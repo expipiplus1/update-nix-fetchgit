@@ -19,8 +19,8 @@ library
                      , Update.Span
                      , Update.Nix.FetchGit.Prefetch
                      , Update.Nix.FetchGit.Warning
-  other-modules:       Update.Nix.FetchGit.Utils
-                     , Update.Nix.FetchGit.Types
+                     , Update.Nix.FetchGit.Utils
+  other-modules:       Update.Nix.FetchGit.Types
   build-depends:       base >= 4.7 && < 5
                      , aeson >= 0.9 && < 0.12
                      , ansi-wl-pprint >= 0.6 && < 0.7

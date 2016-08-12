@@ -7,6 +7,7 @@ import           Prelude             hiding (readFile, writeFile)
 import           System.Environment  (getArgs)
 import           System.Exit
 import           Update.Nix.FetchGit
+import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
 
@@ -33,5 +34,5 @@ main =
 
 printErrorAndExit :: Warning -> IO ()
 printErrorAndExit e = do
-  print e
+  print (formatWarning e)
   exitWith (ExitFailure 1)

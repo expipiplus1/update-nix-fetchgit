@@ -1,7 +1,6 @@
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Update.Nix.FetchGit.Utils
   ( RepoLocation(..)
@@ -13,6 +12,7 @@ module Update.Nix.FetchGit.Utils
   , exprText
   , exprSpan
   , parseISO8601DateToDay
+  , formatWarning
   ) where
 
 import           Data.Generics.Uniplate.Data
@@ -103,20 +103,20 @@ parseISO8601DateToDay t =
     Nothing -> Left $ InvalidDateString t
     Just day -> pure day
 
-instance Show Warning where
-  show (CouldNotParseInput doc) = show doc
-  show (MissingAttr attrName) =
-    "Error: The \"" <> unpack attrName <> "\" attribute is missing."
-  show (DuplicateAttrs attrName) =
-    "Error: The \"" <> unpack attrName <> "\" attribute appears twice in a set."
-  show (NotAString expr) =
-    "Error: The expression at "
-    <> (prettyPrintSourcePos . sourceSpanBegin . exprSpan) expr
-    <> " is not a string literal."
-  show (NixPrefetchGitFailed exitCode errorOutput) =
-    "Error: nix-prefetch-git failed with exit code " <> show exitCode
-    <> " and error output:\n" <> unpack errorOutput
-  show (InvalidPrefetchGitOutput output) =
-    "Error: Output from nix-prefetch-git is invalid:\n" <> show output
-  show (InvalidDateString text) =
-    "Error: Date string is invalid: " <> show text
+formatWarning :: Warning -> String
+formatWarning (CouldNotParseInput doc) = show doc
+formatWarning (MissingAttr attrName) =
+  "Error: The \"" <> unpack attrName <> "\" attribute is missing."
+formatWarning (DuplicateAttrs attrName) =
+  "Error: The \"" <> unpack attrName <> "\" attribute appears twice in a set."
+formatWarning (NotAString expr) =
+  "Error: The expression at "
+  <> (prettyPrintSourcePos . sourceSpanBegin . exprSpan) expr
+  <> " is not a string literal."
+formatWarning (NixPrefetchGitFailed exitCode errorOutput) =
+  "Error: nix-prefetch-git failed with exit code " <> show exitCode
+  <> " and error output:\n" <> unpack errorOutput
+formatWarning (InvalidPrefetchGitOutput output) =
+  "Error: Output from nix-prefetch-git is invalid:\n" <> show output
+formatWarning (InvalidDateString text) =
+  "Error: Date string is invalid: " <> show text
