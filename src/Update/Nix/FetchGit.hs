@@ -21,7 +21,7 @@ import           Update.Span
 -- Tying it all together
 --------------------------------------------------------------------------------
 
--- | Given the contents of a Nix file, returns the SpanUpdates
+-- | Given the path to a Nix file, returns the SpanUpdates
 -- all the parts of the file we want to update.
 updatesFromFile :: FilePath -> IO (Either Warning [SpanUpdate])
 updatesFromFile f = runExceptT $ do
