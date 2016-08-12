@@ -8,7 +8,7 @@ module Update.Nix.FetchGit
 import           Control.Concurrent.Async     (mapConcurrently)
 import           Control.Error
 import           Data.Foldable                (toList)
-import           Data.Generics.Uniplate.Data
+import           Data.Generics.Uniplate.Data  (para)
 import           Data.Text                    (pack)
 import           Nix.Expr
 import           Update.Nix.FetchGit.Prefetch

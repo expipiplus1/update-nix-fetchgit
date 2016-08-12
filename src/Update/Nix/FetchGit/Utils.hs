@@ -15,7 +15,7 @@ module Update.Nix.FetchGit.Utils
   , formatWarning
   ) where
 
-import           Data.Generics.Uniplate.Data
+import           Data.Generics.Uniplate.Data (transform)
 import           Data.Maybe                  (catMaybes)
 import           Data.Monoid                 ((<>))
 import           Data.Text                   (Text, unpack, splitOn)
