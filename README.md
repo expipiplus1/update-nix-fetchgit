@@ -28,17 +28,19 @@ The file will be updated in place.
 
 Here is an example of a Nix expression that can be updated by this program:
 
-    { stdenv, fetchgit }:
+```nix
+{ stdenv, fetchgit }:
 
-    stdenv.mkDerivation rec {
-      name = "foo-${version}";
-      version = "2016-07-13";
-      src = fetchgit {
-        url = "git://midipix.org/slibtool";
-        rev = "4f56fd184ef6020626492a6f954a486d54f8b7ba";
-        sha256 = "0nmyp5yrzl9dbq85wyiimsj9fklb8637a1936nw7zzvlnzkgh28n";
-      };
-    }
+stdenv.mkDerivation rec {
+  name = "foo-${version}";
+  version = "2016-07-13";
+  src = fetchgit {
+    url = "git://midipix.org/slibtool";
+    rev = "4f56fd184ef6020626492a6f954a486d54f8b7ba";
+    sha256 = "0nmyp5yrzl9dbq85wyiimsj9fklb8637a1936nw7zzvlnzkgh28n";
+  };
+}
+```
 
 The `rev`, `sha256`, and `version` attributes will all be updated.
 
