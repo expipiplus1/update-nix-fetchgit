@@ -40,13 +40,14 @@ exprToFetchTree :: NExprLoc -> Either Warning (FetchTree FetchGitArgs)
 exprToFetchTree = para $ \e subs -> case e of
   -- If it is a call (application) of fetchgit, record the
   -- arguments since we will need to update them.
-  AnnE _ (NApp (AnnE _ (NSym fg)) (AnnE _ (NSet bindings)))
-    | fg `elem` ["fetchgit", "fetchgitPrivate"]
+  AnnE _ (NApp function (AnnE _ (NSet bindings)))
+    | extractFuncName function == Just "fetchgit"
+    || extractFuncName function == Just "fetchgitPrivate"
     -> FetchNode <$> extractFetchGitArgs bindings
 
   -- Similarly, record calls to fetchFromGitHub.
-  AnnE _ (NApp (AnnE _ (NSym fg)) (AnnE _ (NSet bindings)))
-    | fg == "fetchFromGitHub"
+  AnnE _ (NApp function (AnnE _ (NSet bindings)))
+    | extractFuncName function == Just "fetchFromGitHub"
     -> FetchNode <$> extractFetchFromGitHubArgs bindings
 
   -- If it is an attribute set, find any attributes in it that we
