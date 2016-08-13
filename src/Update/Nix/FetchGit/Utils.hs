@@ -1,12 +1,14 @@
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ViewPatterns      #-}
 
 module Update.Nix.FetchGit.Utils
   ( RepoLocation(..)
   , ourParseNixFile
   , extractUrlString
   , quoteString
+  , extractFuncName
   , extractAttr
   , findAttr
   , exprText
@@ -71,6 +73,14 @@ exprSpan expr = SourceSpan (deltaToSourcePos begin) (deltaToSourcePos end)
 deltaToSourcePos :: Delta -> SourcePos
 deltaToSourcePos delta = SourcePos line column
                  where (Directed _ line column _ _) = delta
+
+-- | Given an expression that is supposed to represent a function,
+-- extracts the name of the function.  If we cannot figure out the
+-- function name, returns Nothing.
+extractFuncName :: NExprLoc -> Maybe Text
+extractFuncName (AnnE _ (NSym name)) = Just name
+extractFuncName (AnnE _ (NSelect _ (reverse -> StaticKey name:_) _)) = Just name
+extractFuncName _ = Nothing
 
 -- | Extract a named attribute from an attrset.
 extractAttr :: Text -> [Binding a] -> Either Warning a
