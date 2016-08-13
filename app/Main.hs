@@ -6,6 +6,7 @@ import           Data.Text.IO        (readFile, writeFile)
 import           Prelude             hiding (readFile, writeFile)
 import           System.Environment  (getArgs)
 import           System.Exit
+import           System.IO           (hPutStrLn, stderr)
 import           Update.Nix.FetchGit
 import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Warning
@@ -34,5 +35,5 @@ main =
 
 printErrorAndExit :: Warning -> IO ()
 printErrorAndExit e = do
-  print (formatWarning e)
+  hPutStrLn stderr (formatWarning e)
   exitWith (ExitFailure 1)
