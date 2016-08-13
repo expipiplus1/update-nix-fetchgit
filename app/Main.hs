@@ -34,5 +34,5 @@ main =
 
 printErrorAndExit :: Warning -> IO ()
 printErrorAndExit e = do
-  print (formatWarning e)
+  putStr (formatWarning e)
   exitWith (ExitFailure 1)
