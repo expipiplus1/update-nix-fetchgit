@@ -1,7 +1,8 @@
 name:                update-nix-fetchgit
 version:             0.1.0.0
 synopsis:            A program to update fetchgit values in Nix expressions
-description:         Please see README.md
+description:         This command-line utility is meant to be used by people maintaining Nix expressions that fetch files from Git repositories.
+                     It automates the process of keeping such expressions up-to-date with the latest upstream sources.
 homepage:            https://github.com/expipiplus1/update-nix-fetchgit#readme
 license:             BSD3
 license-file:        LICENSE
