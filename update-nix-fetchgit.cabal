@@ -23,7 +23,7 @@ library
                      , Update.Nix.FetchGit.Utils
   other-modules:       Update.Nix.FetchGit.Types
   build-depends:       base >= 4.7 && < 5
-                     , aeson >= 0.9 && < 0.12
+                     , aeson >= 0.9 && < 1.1
                      , ansi-wl-pprint >= 0.6 && < 0.7
                      , async >= 2.1 && < 2.2
                      , bytestring >= 0.10 && < 0.11
