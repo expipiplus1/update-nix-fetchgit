@@ -1,19 +1,24 @@
-{ mkDerivation, aeson, ansi-wl-pprint, async, base, bytestring
-, data-fix, errors, hnix, process, stdenv, text, time, transformers
-, uniplate, utf8-string
-}:
-mkDerivation {
-  pname = "update-nix-fetchgit";
-  version = "0.1.0.0";
-  src = ./.;
-  isLibrary = true;
-  isExecutable = true;
-  libraryHaskellDepends = [
-    aeson ansi-wl-pprint async base bytestring data-fix errors hnix
-    process text time transformers uniplate utf8-string
-  ];
-  executableHaskellDepends = [ base text ];
-  homepage = "https://github.com/expipiplus1/update-nix-fetchgit#readme";
-  description = "A program to update fetchgit values in Nix expressions";
-  license = stdenv.lib.licenses.bsd3;
-}
+{ pkgs ? import <nixpkgs> {}, compiler ? "ghc822" }:
+
+# Strip out the irrelevant parts of the source
+let src = with pkgs.lib;
+          let p = n: t: toString ./dist != n && t != "unknown";
+          in cleanSourceWith {filter = p; src = cleanSource ./.;};
+
+    haskellPackages = pkgs.haskell.packages.${compiler}.override {
+      overrides = self: super: {
+      };
+    };
+
+    extraEnvPackages = [
+    ];
+
+    drv =
+      haskellPackages.callCabal2nix "update-nix-fetchgit" src {};
+
+    envWithExtras = pkgs.lib.overrideDerivation drv.env (attrs: {
+      buildInputs = attrs.buildInputs ++ extraEnvPackages;
+    });
+
+in
+  drv // { env = envWithExtras; }

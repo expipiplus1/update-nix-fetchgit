@@ -17,23 +17,23 @@ module Update.Nix.FetchGit.Utils
   , formatWarning
   ) where
 
-import           Control.Error               (lastMay)
 import           Data.Generics.Uniplate.Data (transform)
 import           Data.Maybe                  (catMaybes)
 import           Data.Monoid                 ((<>))
 import           Data.Text                   (Text, unpack, splitOn)
 import           Data.Time                   (parseTimeM, defaultTimeLocale)
+import qualified Data.List.NonEmpty as NE
 import           Nix.Parser                  (parseNixFileLoc, Result(..))
-import           Text.Trifecta.Result        (_errDoc)
-import           Nix.Expr
+import           Nix.Expr hiding(SourcePos)
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
+import qualified Text.Megaparsec.Pos as M
 
 ourParseNixFile :: FilePath -> IO (Either Warning NExprLoc)
 ourParseNixFile f =
   parseNixFileLoc f >>= \case
-    Failure parseError -> pure $ Left (CouldNotParseInput (_errDoc parseError))
+    Failure parseError -> pure $ Left (CouldNotParseInput parseError)
     Success expr -> pure $ pure $ fixNixSets expr
 
 -- Convert all NRecSet values (recursive sets) to NSet values because
@@ -71,17 +71,20 @@ exprSpan expr = SourceSpan (deltaToSourcePos begin) (deltaToSourcePos end)
          where (AnnE (SrcSpan begin end) _) = expr
 
 -- | Go from a 'Delta' to a 'SourcePos'.
-deltaToSourcePos :: Delta -> SourcePos
-deltaToSourcePos delta = SourcePos line column
-                 where (Directed _ line column _ _) = delta
+deltaToSourcePos :: M.SourcePos -> SourcePos
+deltaToSourcePos M.SourcePos { sourceLine = l, sourceColumn = c } = SourcePos
+  (pred $ fromPos l)
+  (pred $ fromPos c)
+  where fromPos = fromIntegral . M.unPos
 
 -- | Given an expression that is supposed to represent a function,
 -- extracts the name of the function.  If we cannot figure out the
 -- function name, returns Nothing.
 extractFuncName :: NExprLoc -> Maybe Text
-extractFuncName (AnnE _ (NSym name)) = Just name
-extractFuncName (AnnE _ (NSelect _ (lastMay -> Just (StaticKey name)) _)) = Just name
-extractFuncName _ = Nothing
+extractFuncName = \case
+  AnnE _ (NSym name) -> Just name
+  AnnE _ (NSelect _ (NE.last -> StaticKey name) _) -> Just name
+  _                  -> Nothing
 
 -- | Extract a named attribute from an attrset.
 extractAttr :: Text -> [Binding a] -> Either Warning a
@@ -102,9 +105,9 @@ findAttr name bs = case catMaybes (matchAttr name <$> bs) of
 -- Nothing.
 matchAttr :: Text -> Binding a -> Maybe a
 matchAttr t = \case
-  NamedVar [StaticKey t'] x | t == t' -> Just x
-  NamedVar _ _ -> Nothing
-  Inherit _ _  -> Nothing
+  NamedVar (StaticKey t' NE.:| []) x _ | t == t' -> Just x
+  NamedVar{}                            -> Nothing
+  Inherit{}                             -> Nothing
 
 -- Takes an ISO 8601 date and returns just the day portion.
 parseISO8601DateToDay :: Text -> Either Warning Day
