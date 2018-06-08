@@ -67,12 +67,12 @@ exprText = \case
 
 -- | Get the 'SourceSpan' covering a particular expression.
 exprSpan :: NExprLoc -> SourceSpan
-exprSpan expr = SourceSpan (deltaToSourcePos begin) (deltaToSourcePos end)
+exprSpan expr = SourceSpan (convertSourcePos begin) (convertSourcePos end)
          where (AnnE (SrcSpan begin end) _) = expr
 
 -- | Go from a 'Delta' to a 'SourcePos'.
-deltaToSourcePos :: M.SourcePos -> SourcePos
-deltaToSourcePos M.SourcePos { sourceLine = l, sourceColumn = c } = SourcePos
+convertSourcePos :: M.SourcePos -> SourcePos
+convertSourcePos M.SourcePos { sourceLine = l, sourceColumn = c } = SourcePos
   (pred $ fromPos l)
   (pred $ fromPos c)
   where fromPos = fromIntegral . M.unPos
