@@ -6,8 +6,8 @@
 
 module Update.Span
   ( SpanUpdate(..)
+  , SrcSpan(..)
   , SourcePos(..)
-  , SourceSpan(..)
   , updateSpan
   , updateSpans
   , linearizeSourcePos
@@ -21,24 +21,11 @@ import           Data.List   (genericTake, sortOn)
 import           Data.Monoid ((<>))
 import           Data.Text   (Text, length, lines, splitAt)
 import           Prelude     hiding (length, lines, splitAt)
-
--- | A position in a text file
-data SourcePos = SourcePos{ sourcePosRow :: Int64,
-                            sourcePosColumn :: Int64
-                          }
-  deriving (Show, Eq, Ord, Data)
-
--- | A span of characters with a beginning and an end.
---
--- 'spanEnd' must be greater than 'spanBegin'
-data SourceSpan = SourceSpan{ sourceSpanBegin :: SourcePos
-                            , sourceSpanEnd   :: SourcePos
-                            }
-  deriving (Show, Data)
+import  Nix.Expr.Types.Annotated
 
 -- | A span and some text to replace it with.
 -- They don't have to be the same length.
-data SpanUpdate = SpanUpdate{ spanUpdateSpan     :: SourceSpan
+data SpanUpdate = SpanUpdate{ spanUpdateSpan     :: SrcSpan
                             , spanUpdateContents :: Text
                             }
   deriving (Show, Data)
@@ -46,7 +33,7 @@ data SpanUpdate = SpanUpdate{ spanUpdateSpan     :: SourceSpan
 -- | Update many spans in a file. They must be non-overlapping.
 updateSpans :: [SpanUpdate] -> Text -> Text
 updateSpans us t =
-  let sortedSpans = sortOn (sourceSpanBegin . spanUpdateSpan) us
+  let sortedSpans = sortOn (spanBegin . spanUpdateSpan) us
       anyOverlap = any (uncurry overlaps)
                        (zip <*> tail $ spanUpdateSpan <$> sortedSpans)
   in
@@ -56,20 +43,23 @@ updateSpans us t =
 -- | Update a single span of characters inside a text value. If you're updating
 -- multiples spans it's best to use 'updateSpans'.
 updateSpan :: SpanUpdate -> Text -> Text
-updateSpan (SpanUpdate (SourceSpan b e) r) t =
+updateSpan (SpanUpdate (SrcSpan b e) r) t =
   let (before, _) = split b t
       (_, end) = split e t
   in before <> r <> end
 
 -- | Do two spans overlap
-overlaps :: SourceSpan -> SourceSpan -> Bool
-overlaps (SourceSpan b1 e1) (SourceSpan b2 e2) =
+overlaps :: SrcSpan -> SrcSpan -> Bool
+overlaps (SrcSpan b1 e1) (SrcSpan b2 e2) =
   b2 >= b1 && b2 < e1 || e2 >= b1 && e2 < e1
 
 -- | Split some text at a particular 'SourcePos'
 split :: SourcePos -> Text -> (Text, Text)
-split (SourcePos row col) t =
-  splitAt (fromIntegral (linearizeSourcePos t row col)) t
+split (SourcePos _ row col) t = splitAt
+  (fromIntegral
+    (linearizeSourcePos t (fromIntegral (unPos row - 1)) (fromIntegral (unPos col - 1)))
+  )
+  t
 
 -- | Go from a line and column representation to a single character offset from
 -- the beginning of the text.
@@ -83,5 +73,5 @@ linearizeSourcePos t l c = fromIntegral lineCharOffset + c
    where lineCharOffset = sum . fmap ((+1) . length) . genericTake l . lines $ t
 
 prettyPrintSourcePos :: SourcePos -> String
-prettyPrintSourcePos (SourcePos row column) =
+prettyPrintSourcePos (SourcePos _ row column) =
   "line " <> show row <> " column " <> show column

@@ -4,9 +4,10 @@ module Update.Nix.FetchGit.Warning
 
 import           Data.Text
 import           Nix.Expr
-import           Text.PrettyPrint.ANSI.Leijen (Doc)
+import           Data.Text.Prettyprint.Doc
+import           Data.Void
 
-data Warning = CouldNotParseInput Doc
+data Warning = CouldNotParseInput (Doc Void)
              | MissingAttr Text
              | DuplicateAttrs Text
              | NotAString NExprLoc

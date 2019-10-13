@@ -17,15 +17,22 @@ module Update.Nix.FetchGit.Utils
   , formatWarning
   ) where
 
-import           Control.Error               (lastMay)
-import           Data.Generics.Uniplate.Data (transform)
-import           Data.Maybe                  (catMaybes)
-import           Data.Monoid                 ((<>))
-import           Data.Text                   (Text, unpack, splitOn)
-import           Data.Time                   (parseTimeM, defaultTimeLocale)
-import           Nix.Parser                  (parseNixFileLoc, Result(..))
-import           Text.Trifecta.Result        (_errDoc)
-import           Nix.Expr
+import           Data.Generics.Uniplate.Data              ( transform )
+import           Data.Maybe                               ( catMaybes )
+import           Data.Monoid                              ( (<>) )
+import           Data.List.NonEmpty            as NE
+import           Data.List.NonEmpty                       ( NonEmpty(..) )
+import           Data.Text                                ( Text
+                                                          , unpack
+                                                          , splitOn
+                                                          )
+import           Data.Time                                ( parseTimeM
+                                                          , defaultTimeLocale
+                                                          )
+import           Nix.Parser                               ( parseNixFileLoc
+                                                          , Result(..)
+                                                          )
+import           Nix.Expr                          hiding ( SourcePos )
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
@@ -33,7 +40,7 @@ import           Update.Span
 ourParseNixFile :: FilePath -> IO (Either Warning NExprLoc)
 ourParseNixFile f =
   parseNixFileLoc f >>= \case
-    Failure parseError -> pure $ Left (CouldNotParseInput (_errDoc parseError))
+    Failure parseError -> pure $ Left (CouldNotParseInput parseError)
     Success expr -> pure $ pure $ fixNixSets expr
 
 -- Convert all NRecSet values (recursive sets) to NSet values because
@@ -65,22 +72,17 @@ exprText = \case
   (AnnE _ (NStr (DoubleQuoted [Plain t]))) -> pure t
   e -> Left (NotAString e)
 
--- | Get the 'SourceSpan' covering a particular expression.
-exprSpan :: NExprLoc -> SourceSpan
-exprSpan expr = SourceSpan (deltaToSourcePos begin) (deltaToSourcePos end)
-         where (AnnE (SrcSpan begin end) _) = expr
-
--- | Go from a 'Delta' to a 'SourcePos'.
-deltaToSourcePos :: Delta -> SourcePos
-deltaToSourcePos delta = SourcePos line column
-                 where (Directed _ line column _ _) = delta
+-- | Get the 'SrcSpan' covering a particular expression.
+exprSpan :: NExprLoc -> SrcSpan
+exprSpan (AnnE s _) = s
+exprSpan _ = error "unreachable" -- TODO: Add pattern completeness to hnix
 
 -- | Given an expression that is supposed to represent a function,
 -- extracts the name of the function.  If we cannot figure out the
 -- function name, returns Nothing.
 extractFuncName :: NExprLoc -> Maybe Text
 extractFuncName (AnnE _ (NSym name)) = Just name
-extractFuncName (AnnE _ (NSelect _ (lastMay -> Just (StaticKey name)) _)) = Just name
+extractFuncName (AnnE _ (NSelect _ (NE.last -> StaticKey name) _)) = Just name
 extractFuncName _ = Nothing
 
 -- | Extract a named attribute from an attrset.
@@ -102,9 +104,9 @@ findAttr name bs = case catMaybes (matchAttr name <$> bs) of
 -- Nothing.
 matchAttr :: Text -> Binding a -> Maybe a
 matchAttr t = \case
-  NamedVar [StaticKey t'] x | t == t' -> Just x
-  NamedVar _ _ -> Nothing
-  Inherit _ _  -> Nothing
+  NamedVar (StaticKey t' :|[]) x _ | t == t' -> Just x
+  NamedVar _ _ _ -> Nothing
+  Inherit _ _ _  -> Nothing
 
 -- Takes an ISO 8601 date and returns just the day portion.
 parseISO8601DateToDay :: Text -> Either Warning Day
@@ -122,7 +124,7 @@ formatWarning (DuplicateAttrs attrName) =
   "Error: The \"" <> unpack attrName <> "\" attribute appears twice in a set."
 formatWarning (NotAString expr) =
   "Error: The expression at "
-  <> (prettyPrintSourcePos . sourceSpanBegin . exprSpan) expr
+  <> (prettyPrintSourcePos . spanBegin . exprSpan) expr
   <> " is not a string literal."
 formatWarning (NixPrefetchGitFailed exitCode errorOutput) =
   "Error: nix-prefetch-git failed with exit code " <> show exitCode
