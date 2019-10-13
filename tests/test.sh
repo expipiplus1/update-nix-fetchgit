@@ -1,4 +1,4 @@
-#/bin/bash
+#!/usr/bin/env bash
 
 # Bash script for testing update-nix-fetchgit.
 #
