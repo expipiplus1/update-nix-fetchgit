@@ -10,7 +10,7 @@ import           Control.Error
 import           Control.Monad.IO.Class      (liftIO)
 import           Data.Aeson                  (FromJSON, decode)
 import           Data.ByteString.Lazy.UTF8   (fromString)
-import           Data.Text
+import           Data.Text                   (Text, pack, unpack)
 import           GHC.Generics
 import           System.Exit                 (ExitCode (..))
 import           System.Process              (readProcessWithExitCode)
@@ -26,11 +26,12 @@ data NixPrefetchGitOutput = NixPrefetchGitOutput{ url    :: Text
   deriving (Show, Generic, FromJSON)
 
 -- | Run nix-prefetch-git
-nixPrefetchGit :: Text -- ^ The URL to prefetch
+nixPrefetchGit :: [Text] -- ^ Extra arguments for nix-prefetch-git
+               -> Text   -- ^ The URL to prefetch
                -> IO (Either Warning NixPrefetchGitOutput)
-nixPrefetchGit prefetchURL = runExceptT $ do
+nixPrefetchGit extraArgs prefetchURL = runExceptT $ do
   (exitCode, nsStdout, nsStderr) <- liftIO $
-    readProcessWithExitCode "nix-prefetch-git" [unpack prefetchURL] ""
+    readProcessWithExitCode "nix-prefetch-git" (map unpack extraArgs ++ [unpack prefetchURL]) ""
   hoistEither $ case exitCode of
     ExitFailure e -> Left (NixPrefetchGitFailed e (pack nsStderr))
     ExitSuccess -> pure ()
