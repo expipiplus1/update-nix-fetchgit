@@ -9,7 +9,7 @@ import           Control.Concurrent.Async     (mapConcurrently)
 import           Control.Error
 import           Data.Foldable                (toList)
 import           Data.Generics.Uniplate.Data  (para)
-import           Data.Text                    (pack)
+import           Data.Text                    (Text, pack)
 import           Nix.Expr
 import           Update.Nix.FetchGit.Prefetch
 import           Update.Nix.FetchGit.Types
@@ -23,12 +23,12 @@ import           Update.Span
 
 -- | Given the path to a Nix file, returns the SpanUpdates
 -- all the parts of the file we want to update.
-updatesFromFile :: FilePath -> IO (Either Warning [SpanUpdate])
-updatesFromFile f = runExceptT $ do
+updatesFromFile :: FilePath -> [Text] -> IO (Either Warning [SpanUpdate])
+updatesFromFile f extraArgs = runExceptT $ do
   expr <- ExceptT $ ourParseNixFile f
   treeWithArgs <- hoistEither $ exprToFetchTree expr
   treeWithLatest <- ExceptT $
-    sequenceA <$> mapConcurrently getFetchGitLatestInfo treeWithArgs
+    sequenceA <$> mapConcurrently (getFetchGitLatestInfo extraArgs) treeWithArgs
   pure (fetchTreeToSpanUpdates treeWithLatest)
 
 --------------------------------------------------------------------------------
@@ -77,9 +77,9 @@ extractFetchFromGitHubArgs bindings =
 -- Getting updated information from the internet.
 --------------------------------------------------------------------------------
 
-getFetchGitLatestInfo :: FetchGitArgs -> IO (Either Warning FetchGitLatestInfo)
-getFetchGitLatestInfo args = runExceptT $ do
-  o <- ExceptT (nixPrefetchGit (extractUrlString $ repoLocation args))
+getFetchGitLatestInfo :: [Text] -> FetchGitArgs -> IO (Either Warning FetchGitLatestInfo)
+getFetchGitLatestInfo extraArgs args = runExceptT $ do
+  o <- ExceptT (nixPrefetchGit extraArgs (extractUrlString $ repoLocation args))
   d <- hoistEither (parseISO8601DateToDay (date o))
   pure $ FetchGitLatestInfo args (rev o) (sha256 o) d
 

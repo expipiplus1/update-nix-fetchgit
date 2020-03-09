@@ -23,6 +23,12 @@ Pass the name of the file to be updated as the first argument:
 
 The file will be updated in place.
 
+## Extra arguments
+
+`update-nix-fetchgit` will pass any extra arguments after the filename to `nix-prefetch-git`:
+
+    update-nix-fetchgit filename.nix --rev refs/heads/myBranch
+
 
 # Example
 
