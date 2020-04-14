@@ -17,11 +17,8 @@ module Update.Nix.FetchGit.Utils
   , formatWarning
   ) where
 
-import           Data.Generics.Uniplate.Data              ( transform )
 import           Data.Maybe                               ( catMaybes )
-import           Data.Monoid                              ( (<>) )
 import           Data.List.NonEmpty            as NE
-import           Data.List.NonEmpty                       ( NonEmpty(..) )
 import           Data.Text                                ( Text
                                                           , unpack
                                                           , splitOn
