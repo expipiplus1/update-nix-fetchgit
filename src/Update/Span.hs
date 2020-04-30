@@ -12,6 +12,7 @@ module Update.Span
   , updateSpans
   , linearizeSourcePos
   , prettyPrintSourcePos
+  , split
   ) where
 
 import           Control.Exception (assert)
