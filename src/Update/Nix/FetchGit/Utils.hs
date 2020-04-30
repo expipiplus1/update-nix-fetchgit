@@ -11,6 +11,7 @@ module Update.Nix.FetchGit.Utils
   , extractFuncName
   , extractAttr
   , findAttr
+  , matchAttr
   , exprText
   , exprSpan
   , parseISO8601DateToDay
