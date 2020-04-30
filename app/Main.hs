@@ -16,7 +16,7 @@ import           Update.Span
 main :: IO ()
 main =
   -- Super simple command line parsing at the moment, just look for one
-  -- filename.
+  -- filename and optionally pass extra arguments to `nix-prefetch-git`.
   getArgs >>= \case
     [filename] -> processFile filename []
     (filename:args) -> processFile filename (map pack args)
