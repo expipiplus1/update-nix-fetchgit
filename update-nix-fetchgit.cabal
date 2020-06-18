@@ -11,8 +11,11 @@ maintainer:          haskell@monoid.al
 copyright:           2015 Joe Hermaszewski
 category:            Nix
 build-type:          Simple
--- extra-source-files:
 cabal-version:       >=1.10
+extra-source-files:
+  CHANGELOG.md
+  LICENSE
+  README.md
 
 library
   hs-source-dirs:      src
