@@ -11,17 +11,15 @@ module Update.Nix.FetchGit.Utils
   , extractFuncName
   , extractAttr
   , findAttr
+  , matchAttr
   , exprText
   , exprSpan
   , parseISO8601DateToDay
   , formatWarning
   ) where
 
-import           Data.Generics.Uniplate.Data              ( transform )
 import           Data.Maybe                               ( catMaybes )
-import           Data.Monoid                              ( (<>) )
 import           Data.List.NonEmpty            as NE
-import           Data.List.NonEmpty                       ( NonEmpty(..) )
 import           Data.Text                                ( Text
                                                           , unpack
                                                           , splitOn
@@ -32,6 +30,7 @@ import           Data.Time                                ( parseTimeM
 import           Nix.Parser                               ( parseNixFileLoc
                                                           , Result(..)
                                                           )
+import           Nix.Reduce
 import           Nix.Expr                          hiding ( SourcePos )
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Warning
@@ -41,15 +40,7 @@ ourParseNixFile :: FilePath -> IO (Either Warning NExprLoc)
 ourParseNixFile f =
   parseNixFileLoc f >>= \case
     Failure parseError -> pure $ Left (CouldNotParseInput parseError)
-    Success expr -> pure $ pure $ fixNixSets expr
-
--- Convert all NRecSet values (recursive sets) to NSet values because
--- we do not care about the distinction between NRecSet and NSet and
--- we want our program to treat both types equally.
-fixNixSets :: NExprLoc -> NExprLoc
-fixNixSets = transform fix
-  where fix (AnnE s (NRecSet bindings)) = AnnE s (NSet bindings)
-        fix n = n
+    Success expr -> pure <$> reduceExpr Nothing expr
 
 -- | Get the url from either a nix expression for the url or a repo and owner
 -- expression.

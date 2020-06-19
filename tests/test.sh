@@ -13,7 +13,7 @@ set -ue
 # Change to the directory where this script is located.
 cd $(dirname $0)
 
-updater='../dist/build/update-nix-fetchgit/update-nix-fetchgit'
+updater="$( echo ../dist-newstyle/build/*/*/update-nix-fetchgit-*/x/update-nix-fetchgit/opt/build/update-nix-fetchgit/update-nix-fetchgit )"
 
 # Prepares git repositories on the local machine that we will use for
 # testing.

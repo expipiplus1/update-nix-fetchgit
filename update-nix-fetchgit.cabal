@@ -1,5 +1,5 @@
 name:                update-nix-fetchgit
-version:             0.1.0.0
+version:             0.1.1.0
 synopsis:            A program to update fetchgit values in Nix expressions
 description:         This command-line utility is meant to be used by people maintaining Nix expressions that fetch files from Git repositories.
                      It automates the process of keeping such expressions up-to-date with the latest upstream sources.
@@ -11,8 +11,11 @@ maintainer:          haskell@monoid.al
 copyright:           2015 Joe Hermaszewski
 category:            Nix
 build-type:          Simple
--- extra-source-files:
 cabal-version:       >=1.10
+extra-source-files:
+  CHANGELOG.md
+  LICENSE
+  README.md
 
 library
   hs-source-dirs:      src
@@ -28,7 +31,7 @@ library
                      , bytestring >= 0.10
                      , data-fix >= 0.0
                      , errors >= 2.1
-                     , hnix >= 0.6
+                     , hnix >= 0.8
                      , prettyprinter
                      , process >= 1.2
                      , text >= 1.2

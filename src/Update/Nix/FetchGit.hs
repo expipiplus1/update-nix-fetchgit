@@ -3,6 +3,7 @@
 
 module Update.Nix.FetchGit
   ( updatesFromFile
+  , processFile
   ) where
 
 import           Control.Concurrent.Async     (mapConcurrently)
@@ -17,9 +18,36 @@ import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
 
+import qualified Data.Text.IO
+import qualified System.IO
+import qualified System.Exit
+
 --------------------------------------------------------------------------------
 -- Tying it all together
 --------------------------------------------------------------------------------
+
+-- | Provided FilePath, update Nix file in-place
+processFile :: FilePath -> [Text] -> IO ()
+processFile filename args = do
+  t <- Data.Text.IO.readFile filename
+  -- Get the updates from this file.
+  updatesFromFile filename args >>= \case
+    -- If we have any errors, print them and finish.
+    Left ws -> printErrorAndExit ws
+    Right us ->
+      -- Update the text of the file in memory.
+      case updateSpans us t of
+        -- If updates are needed, write to the file.
+        t' | t' /= t -> do
+          Data.Text.IO.writeFile filename t'
+          putStrLn $ "Made " ++ (show $ length us) ++ " changes"
+
+        _ -> putStrLn "No updates"
+  where
+    printErrorAndExit :: Warning -> IO ()
+    printErrorAndExit e = do
+      System.IO.hPutStrLn System.IO.stderr (formatWarning e)
+      System.Exit.exitFailure
 
 -- | Given the path to a Nix file, returns the SpanUpdates
 -- all the parts of the file we want to update.
@@ -40,19 +68,19 @@ exprToFetchTree :: NExprLoc -> Either Warning (FetchTree FetchGitArgs)
 exprToFetchTree = para $ \e subs -> case e of
   -- If it is a call (application) of fetchgit, record the
   -- arguments since we will need to update them.
-  AnnE _ (NBinary NApp function (AnnE _ (NSet bindings)))
+  AnnE _ (NBinary NApp function (AnnE _ (NSet _rec bindings)))
     | extractFuncName function == Just "fetchgit"
     || extractFuncName function == Just "fetchgitPrivate"
     -> FetchNode <$> extractFetchGitArgs bindings
 
   -- Similarly, record calls to fetchFromGitHub.
-  AnnE _ (NBinary NApp function (AnnE _ (NSet bindings)))
+  AnnE _ (NBinary NApp function (AnnE _ (NSet _rec bindings)))
     | extractFuncName function == Just "fetchFromGitHub"
     -> FetchNode <$> extractFetchFromGitHubArgs bindings
 
   -- If it is an attribute set, find any attributes in it that we
   -- might want to update.
-  AnnE _ (NSet bindings)
+  AnnE _ (NSet _rec bindings)
     -> Node <$> findAttr "version" bindings <*> sequenceA subs
 
   -- If this is something uninteresting, just wrap the sub-trees.

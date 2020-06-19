@@ -12,13 +12,13 @@ module Update.Span
   , updateSpans
   , linearizeSourcePos
   , prettyPrintSourcePos
+  , split
   ) where
 
 import           Control.Exception (assert)
 import           Data.Data   (Data)
 import           Data.Int    (Int64)
 import           Data.List   (genericTake, sortOn)
-import           Data.Monoid ((<>))
 import           Data.Text   (Text, length, lines, splitAt)
 import           Prelude     hiding (length, lines, splitAt)
 import  Nix.Expr.Types.Annotated
