@@ -31,7 +31,7 @@ library
                      , bytestring >= 0.10
                      , data-fix >= 0.0
                      , errors >= 2.1
-                     , hnix >= 0.6
+                     , hnix >= 0.8
                      , prettyprinter
                      , process >= 1.2
                      , text >= 1.2
