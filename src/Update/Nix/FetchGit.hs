@@ -3,6 +3,7 @@
 
 module Update.Nix.FetchGit
   ( updatesFromFile
+  , processFile
   ) where
 
 import           Control.Concurrent.Async     (mapConcurrently)
@@ -17,9 +18,36 @@ import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
 
+import qualified Data.Text.IO
+import qualified System.IO
+import qualified System.Exit
+
 --------------------------------------------------------------------------------
 -- Tying it all together
 --------------------------------------------------------------------------------
+
+-- | Provided FilePath, update Nix file in-place
+processFile :: FilePath -> [Text] -> IO ()
+processFile filename args = do
+  t <- Data.Text.IO.readFile filename
+  -- Get the updates from this file.
+  updatesFromFile filename args >>= \case
+    -- If we have any errors, print them and finish.
+    Left ws -> printErrorAndExit ws
+    Right us ->
+      -- Update the text of the file in memory.
+      case updateSpans us t of
+        -- If updates are needed, write to the file.
+        t' | t' /= t -> do
+          Data.Text.IO.writeFile filename t'
+          putStrLn $ "Made " ++ (show $ length us) ++ " changes"
+
+        _ -> putStrLn "No updates"
+  where
+    printErrorAndExit :: Warning -> IO ()
+    printErrorAndExit e = do
+      System.IO.hPutStrLn System.IO.stderr (formatWarning e)
+      System.Exit.exitFailure
 
 -- | Given the path to a Nix file, returns the SpanUpdates
 -- all the parts of the file we want to update.
