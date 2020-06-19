@@ -16,6 +16,17 @@ extra-source-files:
   CHANGELOG.md
   LICENSE
   README.md
+  tests/fakeRepo.sh
+  tests/test_max_version.expected.nix
+  tests/test_max_version.in.nix
+  tests/test_rec_sets.expected.nix
+  tests/test_rec_sets.in.nix
+  tests/test_scoped.expected.nix
+  tests/test_scoped.in.nix
+  tests/test_simple_update.expected.nix
+  tests/test_simple_update.in.nix
+  tests/test_version_update.expected.nix
+  tests/test_version_update.in.nix
 
 library
   hs-source-dirs:      src
@@ -48,6 +59,23 @@ executable update-nix-fetchgit
   build-depends:       base
                      , text >= 1.2
                      , update-nix-fetchgit
+  default-language:    Haskell2010
+
+test-suite update-nix-fetchgit-samples
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      tests
+  main-is:             Driver.hs
+  other-modules:       Samples
+  build-depends:       base >= 4.7 && < 5
+                     , text
+                     , update-nix-fetchgit
+                     , filepath
+                     , directory
+                     , process
+                     , temporary
+                     , tasty
+                     , tasty-discover
+                     , tasty-golden >= 2.3
   default-language:    Haskell2010
 
 source-repository head
