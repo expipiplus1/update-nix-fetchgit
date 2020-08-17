@@ -78,6 +78,11 @@ exprToFetchTree = para $ \e subs -> case e of
     | extractFuncName function == Just "fetchFromGitHub"
     -> FetchNode <$> extractFetchFromGitHubArgs bindings
 
+  -- And to fetchFromGitLab.
+  AnnE _ (NBinary NApp function (AnnE _ (NSet _rec bindings)))
+    | extractFuncName function == Just "fetchFromGitLab"
+    -> FetchNode <$> extractFetchFromGitLabArgs bindings
+
   -- If it is an attribute set, find any attributes in it that we
   -- might want to update.
   AnnE _ (NSet _rec bindings)
@@ -97,6 +102,14 @@ extractFetchGitArgs bindings =
 extractFetchFromGitHubArgs :: [Binding NExprLoc] -> Either Warning FetchGitArgs
 extractFetchFromGitHubArgs bindings =
     FetchGitArgs <$> (GitHub <$> (exprText =<< extractAttr "owner" bindings)
+                             <*> (exprText =<< extractAttr "repo" bindings))
+                 <*> extractAttr "rev" bindings
+                 <*> extractAttr "sha256" bindings
+
+-- | Extract a 'FetchGitArgs' from the attrset being passed to fetchFromGitLab.
+extractFetchFromGitLabArgs :: [Binding NExprLoc] -> Either Warning FetchGitArgs
+extractFetchFromGitLabArgs bindings =
+    FetchGitArgs <$> (GitLab <$> (exprText =<< extractAttr "owner" bindings)
                              <*> (exprText =<< extractAttr "repo" bindings))
                  <*> extractAttr "rev" bindings
                  <*> extractAttr "sha256" bindings

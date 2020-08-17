@@ -48,6 +48,7 @@ extractUrlString :: RepoLocation -> Text
 extractUrlString = \case
   URL u -> u
   GitHub o r -> "https://github.com/" <> o <> "/" <> r <> ".git"
+  GitLab o r -> "https://gitlab.com/" <> o <> "/" <> r <> ".git"
 
 -- Add double quotes around a string so it can be inserted into a Nix
 -- file as a string literal.

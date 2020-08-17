@@ -24,8 +24,8 @@ data FetchTree fetchInfo = Node { nodeVersionExpr :: Maybe NExprLoc
                          | FetchNode fetchInfo
   deriving (Show, Data, Functor, Foldable, Traversable)
 
--- | Represents the arugments to a call to fetchgit or fetchFromGitHub
---   as parsed from a .nix file.
+-- | Represents the arugments to a call to fetchgit, fetchFromGitHub
+--   or fetchFromGitLab as parsed from a .nix file.
 data FetchGitArgs = FetchGitArgs { repoLocation :: RepoLocation
                                  , revExpr      :: NExprLoc
                                  , sha256Expr   :: NExprLoc
@@ -44,6 +44,9 @@ data FetchGitLatestInfo = FetchGitLatestInfo { originalInfo :: FetchGitArgs
 -- | A repo is either specified by URL or by Github owner/repo.
 data RepoLocation = URL Text
                   | GitHub { owner :: Text
+                           , repo  :: Text
+                           }
+                  | GitLab { owner :: Text
                            , repo  :: Text
                            }
   deriving (Show, Data)
