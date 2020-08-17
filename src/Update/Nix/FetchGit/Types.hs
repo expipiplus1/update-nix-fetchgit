@@ -24,7 +24,7 @@ data FetchTree fetchInfo = Node { nodeVersionExpr :: Maybe NExprLoc
                          | FetchNode fetchInfo
   deriving (Show, Data, Functor, Foldable, Traversable)
 
--- | Represents the arugments to a call to fetchgit, fetchFromGitHub
+-- | Represents the arguments to a call to fetchgit, fetchFromGitHub
 --   or fetchFromGitLab as parsed from a .nix file.
 --   sha256Expr will be empty on calls to builtins.fetchGit.
 data FetchGitArgs = FetchGitArgs { repoLocation :: RepoLocation
