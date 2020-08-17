@@ -73,7 +73,12 @@ exprToFetchTree = para $ \e subs -> case e of
     || extractFuncName function == Just "fetchgitPrivate"
     -> FetchNode <$> extractFetchGitArgs bindings
 
-  -- Similarly, record calls to fetchFromGitHub.
+  -- Similarly for builtins.fetchGit which needs special handling.
+  AnnE _ (NBinary NApp function (AnnE _ (NSet _rec bindings)))
+    | extractFuncName function == Just "fetchGit"
+    -> FetchNode <$> extractFetchGitBuiltinArgs bindings
+
+  -- Also record calls to fetchFromGitHub.
   AnnE _ (NBinary NApp function (AnnE _ (NSet _rec bindings)))
     | extractFuncName function == Just "fetchFromGitHub"
     -> FetchNode <$> extractFetchFromGitHubArgs bindings
@@ -96,7 +101,15 @@ extractFetchGitArgs :: [Binding NExprLoc] -> Either Warning FetchGitArgs
 extractFetchGitArgs bindings =
     FetchGitArgs <$> (URL <$> (exprText =<< extractAttr "url" bindings))
                  <*> extractAttr "rev" bindings
-                 <*> extractAttr "sha256" bindings
+                 <*> (Just <$> extractAttr "sha256" bindings)
+
+-- | Extract a 'FetchGitArgs' from the attrset being passed to builtins.fetchGit,
+--   unlike all the other functions it does not include a sha256 field.
+extractFetchGitBuiltinArgs :: [Binding NExprLoc] -> Either Warning FetchGitArgs
+extractFetchGitBuiltinArgs bindings =
+    FetchGitArgs <$> (URL <$> (exprText =<< extractAttr "url" bindings))
+                 <*> extractAttr "rev" bindings
+                 <*> pure Nothing
 
 -- | Extract a 'FetchGitArgs' from the attrset being passed to fetchFromGitHub.
 extractFetchFromGitHubArgs :: [Binding NExprLoc] -> Either Warning FetchGitArgs
@@ -104,7 +117,7 @@ extractFetchFromGitHubArgs bindings =
     FetchGitArgs <$> (GitHub <$> (exprText =<< extractAttr "owner" bindings)
                              <*> (exprText =<< extractAttr "repo" bindings))
                  <*> extractAttr "rev" bindings
-                 <*> extractAttr "sha256" bindings
+                 <*> (Just <$> extractAttr "sha256" bindings)
 
 -- | Extract a 'FetchGitArgs' from the attrset being passed to fetchFromGitLab.
 extractFetchFromGitLabArgs :: [Binding NExprLoc] -> Either Warning FetchGitArgs
@@ -112,7 +125,7 @@ extractFetchFromGitLabArgs bindings =
     FetchGitArgs <$> (GitLab <$> (exprText =<< extractAttr "owner" bindings)
                              <*> (exprText =<< extractAttr "repo" bindings))
                  <*> extractAttr "rev" bindings
-                 <*> extractAttr "sha256" bindings
+                 <*> (Just <$> extractAttr "sha256" bindings)
 
 --------------------------------------------------------------------------------
 -- Getting updated information from the internet.
@@ -132,11 +145,11 @@ fetchTreeToSpanUpdates :: FetchTree FetchGitLatestInfo -> [SpanUpdate]
 fetchTreeToSpanUpdates node@(Node _ cs) =
   concatMap fetchTreeToSpanUpdates cs ++
   toList (maybeUpdateVersion node)
-fetchTreeToSpanUpdates (FetchNode f) = [revUpdate, sha256Update]
+fetchTreeToSpanUpdates (FetchNode f) = catMaybes [Just revUpdate, sha256Update]
   where revUpdate = SpanUpdate (exprSpan (revExpr args))
                                (quoteString (latestRev f))
-        sha256Update = SpanUpdate (exprSpan (sha256Expr args))
-                                  (quoteString (latestSha256 f))
+        sha256Update = SpanUpdate <$> (exprSpan <$> sha256Expr args)
+                                  <*> Just (quoteString (latestSha256 f))
         args = originalInfo f
 
 -- Given a node of the fetch tree which might contain a version

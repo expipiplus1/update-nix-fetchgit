@@ -26,9 +26,10 @@ data FetchTree fetchInfo = Node { nodeVersionExpr :: Maybe NExprLoc
 
 -- | Represents the arugments to a call to fetchgit, fetchFromGitHub
 --   or fetchFromGitLab as parsed from a .nix file.
+--   sha256Expr will be empty on calls to builtins.fetchGit.
 data FetchGitArgs = FetchGitArgs { repoLocation :: RepoLocation
                                  , revExpr      :: NExprLoc
-                                 , sha256Expr   :: NExprLoc
+                                 , sha256Expr   :: Maybe NExprLoc
                                  }
   deriving (Show, Data)
 
