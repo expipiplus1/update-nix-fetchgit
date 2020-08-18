@@ -5,7 +5,7 @@ This is a command-line utility for updating `fetchgit`, `fetchgitPrivate`, and `
 When you run `update-nix-fetchgit` on a file, it will:
 
 - Read the file and parse it as a Nix expression.
-- Find all Git fetches (calls to `fetchgit`, `fetchgitPrivate`, or `fetchFromGitHub`).
+- Find all Git fetches (calls to `fetchgit`, `fetchgitPrivate`, `fetchFromGitHub` or `fetchFromGitLab`).
 - Run [`nix-prefetch-git`](https://github.com/NixOS/nixpkgs/blob/master/pkgs/build-support/fetchgit/nix-prefetch-git) to get information about the latest HEAD commit of each repository.
 - Update the corresponding rev, sha256, and version attributes for each repository.
 - Overwrite the original input file.
