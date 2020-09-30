@@ -29,7 +29,6 @@ library
                      , aeson >= 0.9
                      , async >= 2.1
                      , bytestring >= 0.10
-                     , data-fix >= 0.0
                      , errors >= 2.1
                      , hnix >= 0.8
                      , prettyprinter
@@ -37,7 +36,6 @@ library
                      , text >= 1.2
                      , time >= 1.5
                      , transformers >= 0.4
-                     , trifecta >= 1.6
                      , uniplate >= 1.6
                      , utf8-string >= 1.0
   default-language:    Haskell2010
