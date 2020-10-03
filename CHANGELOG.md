@@ -1,3 +1,9 @@
+# Version [0.1.2.0](https://github.com/expipiplus1/update-nix-fetchgit/compare/0.1.1.0...0.1.2.0)
+
+* Additions
+  * Support updating `fetchFromGitLab`
+  * Support updating `fetchgit` and `fetchgitPrivate
+
 # Version [0.1.1.0](https://github.com/expipiplus1/update-nix-fetchgit/compare/0.1.0.0...0.1.1.0)
 
 * Changelog started. Previous release was `0.1.0.0`.
