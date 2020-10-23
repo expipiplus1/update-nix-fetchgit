@@ -19,6 +19,7 @@ let
             ./hnix-generic1-nkeyname.patch
             ./hnix-fix-qq.patch
           ];
+          data-fix = self.data-fix_0_3_0;
         } // pkgs.lib.optionalAttrs hoogle {
           ghc = super.ghc // { withPackages = super.ghc.withHoogle; };
           ghcWithPackages = self.ghc.withPackages;
