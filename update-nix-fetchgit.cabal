@@ -21,6 +21,8 @@ library
   hs-source-dirs:      src
   exposed-modules:     Update.Nix.FetchGit
                      , Update.Span
+                     , Update.Nix.Match
+                     , Update.Nix.Unify
                      , Update.Nix.FetchGit.Prefetch
                      , Update.Nix.FetchGit.Warning
                      , Update.Nix.FetchGit.Utils
@@ -30,7 +32,7 @@ library
                      , async >= 2.1
                      , bytestring >= 0.10
                      , errors >= 2.1
-                     , hnix >= 0.8
+                     , hnix >= 0.6
                      , prettyprinter
                      , process >= 1.2
                      , text >= 1.2
@@ -38,6 +40,14 @@ library
                      , transformers >= 0.4
                      , uniplate >= 1.6
                      , utf8-string >= 1.0
+                     , bifunctors
+                     , containers
+                     , pretty-simple
+                     , unification-fd
+                     , data-fix
+                     , mtl
+                     , say
+                     , deepseq
   default-language:    Haskell2010
   ghc-options: -Wall
 
