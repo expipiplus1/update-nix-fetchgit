@@ -13,7 +13,13 @@ let
   haskellPackages = with pkgs.haskell.lib;
     pkgs.haskell.packages.${compiler'}.override {
       overrides = self: super:
-        { } // pkgs.lib.optionalAttrs hoogle {
+        {
+          prettyprinter = self.prettyprinter_1_7_0; # at least 1.7
+          hnix = appendPatches super.hnix [
+            ./hnix-generic1-nkeyname.patch
+            ./hnix-fix-qq.patch
+          ];
+        } // pkgs.lib.optionalAttrs hoogle {
           ghc = super.ghc // { withPackages = super.ghc.withHoogle; };
           ghcWithPackages = self.ghc.withPackages;
         };
