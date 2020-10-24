@@ -23,7 +23,7 @@ import           Nix.TH                         ( nix )
 import           Say
 import           Unsafe.Coerce                  ( unsafeCoerce )
 
-import           Update.Nix.Unify2
+import           Nix.Match
 
 test :: IO ()
 test = do
@@ -44,7 +44,7 @@ test = do
   sayErr "Parsed"
   Control.Exception.evaluate . Control.DeepSeq.force $ haystack
   sayErr "Evaluated"
-  let matches = findExpr needle haystack
+  let matches = findMatches (addHolesLoc needle) haystack
       tags =
         [ t <> ": " <> str
         | (_, ms) <- matches
@@ -52,24 +52,6 @@ test = do
         , let str = T.pack . show . prettyNix . stripAnnotation $ e
         ]
   traverse_ T.putStrLn tags
-
-fixUniverse :: Foldable f => Fix f -> [Fix f]
-fixUniverse e = e : (fixUniverse =<< toList (unFix e))
-
-findExpr :: NExprLoc -> NExprLoc -> [(NExprLoc, [(Text, NExprLoc)])]
-findExpr needle haystack =
-  [ (s, r) | s <- fixUniverse haystack, Just r <- pure $ matchExpr needle s ]
-
-matchExpr :: NExprLoc -> NExprLoc -> Maybe [(Text, NExprLoc)]
-matchExpr = match . addHoles
-
-addHoles :: NExprLoc -> WithHoles NExprLocF Text
-addHoles = unFix >>> \case
-  Compose (Ann _ (NSynHole n)) -> Hole n
-  e                            -> Term . fmap addHoles $ e
-
-mapAnn :: Coercible a b => Fix (AnnF a NExprF) -> Fix (AnnF b NExprF)
-mapAnn = unsafeCoerce
 
 annotateNullSourcePos :: NExpr -> NExprLoc
 annotateNullSourcePos =

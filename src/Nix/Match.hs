@@ -5,12 +5,17 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DefaultSignatures #-}
 
-module Update.Nix.Unify2
+module Nix.Match
   ( match
+  , findMatches
+  , Matchable(..)
+  , GMatchable(..)
   , WithHoles(..)
+  , addHoles
+  , addHolesLoc
   ) where
 
-import           Data.Fix                       ( Fix(Fix) )
+import           Data.Fix
 import           Data.Foldable
 import           Data.List                      ( sortOn )
 import           Data.List.NonEmpty             ( NonEmpty )
@@ -18,9 +23,21 @@ import           Data.Monoid
 import           Data.Text                      ( Text )
 import           GHC.Generics
 import           Nix
+import           Control.Category               ( (>>>) )
+
+-- | Like 'Fix' but each layer could instead be a 'Hole'
+data WithHoles t v
+  = Hole !v
+  | Term !(t (WithHoles t v))
 
 -- | Match a tree with holes against a tree without holes, returning the values
 -- of the holes if it matches.
+--
+-- 'NExprF' and 'NExprLocF' are both instances of 'Matchable'
+--
+-- >>> import Nix.TH
+-- >>> match (addHoles [nix|{foo = x: ^foo; bar = ^bar;}|]) [nix|{foo = x: "hello"; bar = "world"; baz = "!";}|]
+-- Just [("bar",Fix (NStr (DoubleQuoted [Plain "world"]))),("foo",Fix (NStr (DoubleQuoted [Plain "hello"])))]
 match :: Matchable t => WithHoles t v -> Fix t -> Maybe [(v, Fix t)]
 match = fmap (`appEndo` []) .: go
  where
@@ -30,13 +47,57 @@ match = fmap (`appEndo` []) .: go
       m <- zipMatchLeft s t
       fmap fold . traverse (uncurry go) . toList $ m
 
--- | Like 'Fix' but each layer could instead be a 'Hole'
-data WithHoles t v
-  = Hole !v
-  | Term !(t (WithHoles t v))
+-- | Find all the needles in a haystack, returning the matched expression as
+-- well as their filled holes. Results are returned productively in preorder.
+findMatches
+  :: Matchable t
+  => WithHoles t v
+  -- ^ Needle
+  -> Fix t
+  -- ^ Haystack
+  -> [(Fix t, [(v, Fix t)])]
+findMatches needle haystack =
+  [ (s, r) | s <- fixUniverse haystack, Just r <- pure $ match needle s ]
 
-(.:) :: (b -> c) -> (a1 -> a2 -> b) -> a1 -> a2 -> c
-(.:) = (.) . (.)
+-- | Get every @f@ in a @Fix f@ in preorder.
+fixUniverse :: Foldable f => Fix f -> [Fix f]
+fixUniverse e = e : (fixUniverse =<< toList (unFix e))
+
+-- | Make syntactic holes into 'Hole's
+addHoles :: NExpr -> WithHoles NExprF Text
+addHoles = unFix >>> \case
+  NSynHole n -> Hole n
+  e          -> Term . fmap addHoles $ e
+
+-- | Make syntactic holes into 'Hole's
+addHolesLoc :: NExprLoc -> WithHoles NExprLocF Text
+addHolesLoc = unFix >>> \case
+  Compose (Ann _ (NSynHole n)) -> Hole n
+  e                            -> Term . fmap addHolesLoc $ e
+
+----------------------------------------------------------------
+-- Matchable
+----------------------------------------------------------------
+
+class Traversable t => Matchable t where
+  -- | Match one level of structure, returning the matched structure with sub
+  -- structures to match. Needle is the first argument, matchee is the second.
+  --
+  -- Unlike the @Unifiable@ class in the "unification-fd" package, this doesn't
+  -- have to be a commutative operation, the needle will always be the first
+  -- parameter and instances are free to treat if differently if appropriate.
+  zipMatchLeft :: t a -> t b -> Maybe (t (a,b))
+  default zipMatchLeft
+    :: (Generic1 t, GMatchable (Rep1 t))
+    => t a
+    -> t b
+    -> Maybe (t (a, b))
+  zipMatchLeft l r = to1 <$> gZipMatchLeft (from1 l) (from1 r)
+
+-- | Match a composition of 'Matchable' things
+zipMatchLeft2
+  :: (Matchable f, Matchable t) => t (f a) -> t (f b) -> Maybe (t (f (a, b)))
+zipMatchLeft2 a b = zipMatchLeft a b >>= traverse (uncurry zipMatchLeft)
 
 ----------------------------------------------------------------
 -- Matchable instance for NExprF and NExprLocF
@@ -54,16 +115,15 @@ instance Matchable NExprF where
 
   zipMatchLeft (NSet t1 bs1) (NSet t2 bs2) =
     let (bs1', bs2') = reduceBindings bs1 bs2
-    in  to1 <$> gZipMatch (from1 (NSet t1 bs1')) (from1 (NSet t2 bs2'))
+    in  to1 <$> gZipMatchLeft (from1 (NSet t1 bs1')) (from1 (NSet t2 bs2'))
 
   zipMatchLeft (NLet bs1 e1) (NLet bs2 e2) =
     let (bs1', bs2') = reduceBindings bs1 bs2
-    in  to1 <$> gZipMatch (from1 (NLet bs1' e1)) (from1 (NLet bs2' e2))
+    in  to1 <$> gZipMatchLeft (from1 (NLet bs1' e1)) (from1 (NLet bs2' e2))
 
   zipMatchLeft (NAbs (Param "_") e1) (NAbs _ e2) = do
     pure $ NAbs (Param "_") (e1, e2)
-
-  zipMatchLeft l r = to1 <$> gZipMatch (from1 l) (from1 r)
+  zipMatchLeft l r = to1 <$> gZipMatchLeft (from1 l) (from1 r)
 
 -- Don't filter bindings in the needle, as they must all be present
 reduceBindings :: [Binding q] -> [Binding r] -> ([Binding q], [Binding r])
@@ -131,66 +191,49 @@ instance Eq a => Matchable ((,) a) where
 
 instance (Matchable f, Matchable g)=> Matchable (Compose f g) where
 
-----------------------------------------------------------------
--- helpers
-----------------------------------------------------------------
-
--- | Match a composition of 'Matchable' things
-zipMatchLeft2
-  :: (Matchable f, Matchable t) => t (f a) -> t (f b) -> Maybe (t (f (a, b)))
-zipMatchLeft2 a b = zipMatchLeft a b >>= traverse (uncurry zipMatchLeft)
-
-----------------------------------------------------------------
--- Matchable
-----------------------------------------------------------------
-
-class Traversable t => Matchable t where
-  -- | Match one level of structure, returning the matched structure with sub
-  -- structures to match. Needle is the first argument, matchee is the second.
-  zipMatchLeft :: t a -> t b -> Maybe (t (a,b))
-  default zipMatchLeft
-    :: (Generic1 t, GMatchable (Rep1 t))
-    => t a
-    -> t b
-    -> Maybe (t (a, b))
-  zipMatchLeft l r = to1 <$> gZipMatch (from1 l) (from1 r)
 
 ----------------------------------------------------------------
 -- Generic Instance for Matchable
 ----------------------------------------------------------------
 
+-- | A class used in the @default@ definition for 'zipMatchLeft'
 class (Traversable t, Generic1 t) => GMatchable t where
-  gZipMatch :: t a -> t b -> Maybe (t (a,b))
+  gZipMatchLeft :: t a -> t b -> Maybe (t (a,b))
 
 instance GMatchable t => GMatchable (M1 m i t) where
-  gZipMatch (M1 l) (M1 r) = M1 <$> gZipMatch l r
+  gZipMatchLeft (M1 l) (M1 r) = M1 <$> gZipMatchLeft l r
 
 instance GMatchable U1 where
-  gZipMatch _ _ = Just U1
+  gZipMatchLeft _ _ = Just U1
 
 instance Eq c => GMatchable (K1 m c) where
-  gZipMatch (K1 l) (K1 r) | l == r    = Just (K1 l)
-                          | otherwise = Nothing
+  gZipMatchLeft (K1 l) (K1 r) | l == r    = Just (K1 l)
+                              | otherwise = Nothing
 
 instance GMatchable Par1 where
-  gZipMatch (Par1 l) (Par1 r) = Just . Par1 $ (l, r)
+  gZipMatchLeft (Par1 l) (Par1 r) = Just . Par1 $ (l, r)
 
 instance Matchable x => GMatchable (Rec1 x) where
-  gZipMatch (Rec1 l) (Rec1 r) = Rec1 <$> zipMatchLeft l r
+  gZipMatchLeft (Rec1 l) (Rec1 r) = Rec1 <$> zipMatchLeft l r
 
 instance (GMatchable l, GMatchable r) => GMatchable (l :+: r) where
-  gZipMatch (L1 l) (L1 r) = L1 <$> gZipMatch l r
-  gZipMatch (R1 l) (R1 r) = R1 <$> gZipMatch l r
-  gZipMatch _      _      = Nothing
+  gZipMatchLeft (L1 l) (L1 r) = L1 <$> gZipMatchLeft l r
+  gZipMatchLeft (R1 l) (R1 r) = R1 <$> gZipMatchLeft l r
+  gZipMatchLeft _      _      = Nothing
 
 instance (GMatchable l, GMatchable r) => GMatchable (l :*: r) where
-  gZipMatch (l1 :*: r1) (l2 :*: r2) =
-    (:*:) <$> gZipMatch l1 l2 <*> gZipMatch r1 r2
+  gZipMatchLeft (l1 :*: r1) (l2 :*: r2) =
+    (:*:) <$> gZipMatchLeft l1 l2 <*> gZipMatchLeft r1 r2
 
 instance (Matchable a, GMatchable b) => GMatchable (a :.: b) where
-  gZipMatch (Comp1 l) (Comp1 r) = do
-    x <- zipMatchLeft l r >>= traverse
-      (\case
-        (a1, a2) -> gZipMatch a1 a2
-      )
+  gZipMatchLeft (Comp1 l) (Comp1 r) = do
+    x <- zipMatchLeft l r >>= traverse (uncurry gZipMatchLeft)
     pure (Comp1 x)
+
+
+----------------------------------------------------------------
+-- Utils
+----------------------------------------------------------------
+
+(.:) :: (b -> c) -> (a1 -> a2 -> b) -> a1 -> a2 -> c
+(.:) = (.) . (.)
