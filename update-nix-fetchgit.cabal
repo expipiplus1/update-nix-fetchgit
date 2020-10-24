@@ -23,10 +23,10 @@ library
                      , Update.Span
                      , Update.Nix.Match
                      , Update.Nix.Unify
-                     , Update.Nix.Unify2
                      , Update.Nix.FetchGit.Prefetch
                      , Update.Nix.FetchGit.Warning
                      , Update.Nix.FetchGit.Utils
+                     , Nix.Match
   other-modules:       Update.Nix.FetchGit.Types
   build-depends:       base >= 4.7 && < 5
                      , aeson >= 0.9
