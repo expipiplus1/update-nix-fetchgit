@@ -5,6 +5,8 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DefaultSignatures #-}
 
+-- | A set of functions for matching on Nix expression trees and extracting the
+-- values of sub-trees.
 module Nix.Match
   ( match
   , findMatches
@@ -33,7 +35,8 @@ data WithHoles t v
 -- | Match a tree with holes against a tree without holes, returning the values
 -- of the holes if it matches.
 --
--- 'NExprF' and 'NExprLocF' are both instances of 'Matchable'
+-- 'NExprF' and 'NExprLocF' are both instances of 'Matchable'. 'NExprLocF' does
+-- not require the annotations to match.
 --
 -- >>> import Nix.TH
 -- >>> match (addHoles [nix|{foo = x: ^foo; bar = ^bar;}|]) [nix|{foo = x: "hello"; bar = "world"; baz = "!";}|]
@@ -79,6 +82,8 @@ addHolesLoc = unFix >>> \case
 -- Matchable
 ----------------------------------------------------------------
 
+-- | Instances for this class can be derived for any type with a 'Generic1'
+-- instance.
 class Traversable t => Matchable t where
   -- | Match one level of structure, returning the matched structure with sub
   -- structures to match. Needle is the first argument, matchee is the second.
@@ -123,6 +128,7 @@ instance Matchable NExprF where
 
   zipMatchLeft (NAbs (Param "_") e1) (NAbs _ e2) = do
     pure $ NAbs (Param "_") (e1, e2)
+
   zipMatchLeft l r = to1 <$> gZipMatchLeft (from1 l) (from1 r)
 
 -- Don't filter bindings in the needle, as they must all be present
@@ -222,8 +228,8 @@ instance (GMatchable l, GMatchable r) => GMatchable (l :+: r) where
   gZipMatchLeft _      _      = Nothing
 
 instance (GMatchable l, GMatchable r) => GMatchable (l :*: r) where
-  gZipMatchLeft (l1 :*: r1) (l2 :*: r2) =
-    (:*:) <$> gZipMatchLeft l1 l2 <*> gZipMatchLeft r1 r2
+  gZipMatchLeft (l1 :*: l2) (r1 :*: r2) =
+    (:*:) <$> gZipMatchLeft l1 r1 <*> gZipMatchLeft l2 r2
 
 instance (Matchable a, GMatchable b) => GMatchable (a :.: b) where
   gZipMatchLeft (Comp1 l) (Comp1 r) = do
