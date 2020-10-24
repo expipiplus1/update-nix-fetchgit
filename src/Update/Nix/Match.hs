@@ -61,12 +61,12 @@ findExpr needle haystack =
   [ (s, r) | s <- fixUniverse haystack, Just r <- pure $ matchExpr needle s ]
 
 matchExpr :: NExprLoc -> NExprLoc -> Maybe [(Text, NExprLoc)]
-matchExpr = unify . makeTerm
+matchExpr = match . addHoles
 
-makeTerm :: NExprLoc -> UTerm NExprLocF Text
-makeTerm = unFix >>> \case
-  Compose (Ann _ (NSynHole n)) -> UVar n
-  e                            -> UTerm . fmap makeTerm $ e
+addHoles :: NExprLoc -> WithHoles NExprLocF Text
+addHoles = unFix >>> \case
+  Compose (Ann _ (NSynHole n)) -> Hole n
+  e                            -> Term . fmap addHoles $ e
 
 mapAnn :: Coercible a b => Fix (AnnF a NExprF) -> Fix (AnnF b NExprF)
 mapAnn = unsafeCoerce
