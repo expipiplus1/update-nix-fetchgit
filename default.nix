@@ -39,7 +39,7 @@ let
       buildInputs = attrs.buildInputs ++ extraEnvPackages;
     } // pkgs.lib.optionalAttrs hoogle {
       shellHook = attrs.shellHook + ''
-        export HIE_HOOGLE_DATABASE="$(cat $(which hoogle) | sed -n -e 's|.*--database \(.*\.hoo\).*|\1|p')"
+        export HIE_HOOGLE_DATABASE="$(cat $(${pkgs.which}/bin/which hoogle) | sed -n -e 's|.*--database \(.*\.hoo\).*|\1|p')"
       '';
     });
 
