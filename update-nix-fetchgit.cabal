@@ -27,6 +27,7 @@ library
                      , Update.Nix.FetchGit.Warning
                      , Update.Nix.FetchGit.Utils
                      , Nix.Match
+                     , Nix.Match.Typed
   other-modules:       Update.Nix.FetchGit.Types
   build-depends:       base >= 4.7 && < 5
                      , aeson >= 0.9
@@ -49,6 +50,8 @@ library
                      , mtl
                      , say
                      , deepseq
+                     , template-haskell
+                     , syb
   default-language:    Haskell2010
   ghc-options: -Wall
 

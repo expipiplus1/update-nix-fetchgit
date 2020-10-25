@@ -1,55 +1,50 @@
+{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeApplications #-}
+
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Update.Nix.Match where
 
-import           Control.Category               ( (>>>) )
 import           Control.DeepSeq
 import           Control.Exception              ( evaluate )
-import           Data.Coerce
 import           Data.Fix                       ( Fix(..) )
 import           Data.Foldable
-import           Data.Text                      ( Text )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as T
 import           Nix
-import           Nix.TH                         ( nix )
+import           Nix.Match.Typed
 import           Say
-import           Unsafe.Coerce                  ( unsafeCoerce )
-
-import           Nix.Match
 
 test :: IO ()
 test = do
-  let needle = annotateNullSourcePos [nix|
-        callPackage (
-          _:
-          mkDerivation {
-            broken = true;
-            pname = ^name;
-            version = ^version;
-          }
-        ) {}
+  let needle = [matchNixLoc|
+        _.mkDerivation {
+          version = ^version;
+          pname = ^name;
+          _broken = ^broken;
+        }
       |]
   sayErr "Parsing"
   Success haystack <-
     parseNixFileLoc
       "/home/j/src/nixpkgs/pkgs/development/haskell-modules/hackage-packages.nix"
   sayErr "Parsed"
-  Control.Exception.evaluate . Control.DeepSeq.force $ haystack
+  _ <- Control.Exception.evaluate . Control.DeepSeq.force $ haystack
   sayErr "Evaluated"
-  let matches = findMatches (addHolesLoc needle) haystack
+  let matches = findMatchesTyped needle haystack
+      str     = T.pack . show . prettyNix . stripAnnotation
       tags =
-        [ t <> ": " <> str
+        [ str (get @"name" ms) <> ":" <> str (get @"version" ms) <> " " <> maybe
+            "false"
+            str
+            (getOptional @"broken" ms)
         | (_, ms) <- matches
-        , (t, e ) <- ms
-        , let str = T.pack . show . prettyNix . stripAnnotation $ e
         ]
   traverse_ T.putStrLn tags
 
@@ -64,3 +59,24 @@ annotateNullSourcePos =
 nullSourcePos :: SourcePos
 nullSourcePos = SourcePos "" (mkPos 1) (mkPos 1)
 
+foo
+  :: NExprLoc -> (NExprLoc, NExprLoc)
+foo (fmap (\x -> (get @"version" x, get @"name" x)) . matchTyped needle' -> Just (version,name))
+  = (version, name)
+
+bar [matchNixLoc|
+  mkDerivation {
+    version = ^version;
+    pname = ^name;
+    _broken = x;
+  }
+|] = (version, name)
+
+needle' :: TypedMatcher '["broken"] '["version", "name"] NExprLocF
+needle' = [matchNixLoc|
+  mkDerivation {
+    version = ^version;
+    pname = ^name;
+    _broken = ^broken;
+  }
+|]

@@ -26,13 +26,16 @@ data NixPrefetchGitOutput = NixPrefetchGitOutput{ url    :: Text
   deriving (Show, Generic, FromJSON)
 
 -- | Run nix-prefetch-git
-nixPrefetchGit :: [Text] -- ^ Extra arguments for nix-prefetch-git
-               -> Text   -- ^ The URL to prefetch
-               -> IO (Either Warning NixPrefetchGitOutput)
+nixPrefetchGit
+  :: [Text] -- ^ Extra arguments for nix-prefetch-git
+  -> Text   -- ^ The URL to prefetch
+  -> IO (Either Warning NixPrefetchGitOutput)
 nixPrefetchGit extraArgs prefetchURL = runExceptT $ do
-  (exitCode, nsStdout, nsStderr) <- liftIO $
-    readProcessWithExitCode "nix-prefetch-git" (map unpack extraArgs ++ [unpack prefetchURL]) ""
+  (exitCode, nsStdout, nsStderr) <- liftIO $ readProcessWithExitCode
+    "nix-prefetch-git"
+    (map unpack extraArgs ++ [unpack prefetchURL])
+    ""
   hoistEither $ case exitCode of
     ExitFailure e -> Left (NixPrefetchGitFailed e (pack nsStderr))
-    ExitSuccess -> pure ()
+    ExitSuccess   -> pure ()
   decode (fromString nsStdout) ?? InvalidPrefetchGitOutput (pack nsStdout)
