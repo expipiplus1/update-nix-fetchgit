@@ -27,6 +27,7 @@ library
                      , Update.Nix.FetchGit.Utils
                      , Nix.Match
                      , Nix.Match.Typed
+                     , Nix.Comments
   other-modules:       Update.Nix.FetchGit.Types
   build-depends:       base >= 4.7 && < 5
                      , aeson >= 0.9
@@ -42,6 +43,7 @@ library
                      , uniplate >= 1.6
                      , utf8-string >= 1.0
                      , bifunctors
+                     , vector
                      , containers
                      , pretty-simple
                      , unification-fd
