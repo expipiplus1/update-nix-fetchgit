@@ -9,16 +9,12 @@ module Update.Nix.FetchGit.Utils
   , extractUrlString
   , quoteString
   , extractFuncName
-  , extractAttr
-  , findAttr
-  , matchAttr
   , exprText
   , exprSpan
   , parseISO8601DateToDay
   , formatWarning
   ) where
 
-import           Data.Maybe                               ( catMaybes )
 import           Data.List.NonEmpty            as NE
 import           Data.Text                                ( Text
                                                           , unpack
@@ -76,29 +72,6 @@ extractFuncName :: NExprLoc -> Maybe Text
 extractFuncName (AnnE _ (NSym name)) = Just name
 extractFuncName (AnnE _ (NSelect _ (NE.last -> StaticKey name) _)) = Just name
 extractFuncName _ = Nothing
-
--- | Extract a named attribute from an attrset.
-extractAttr :: Text -> [Binding a] -> Either Warning a
-extractAttr name bs = case catMaybes (matchAttr name <$> bs) of
-  [x] -> pure x
-  []  -> Left (MissingAttr name)
-  _   -> Left (DuplicateAttrs name)
-
--- | Find a named attribute in an attrset.  This is appropriate for
--- the case when a missing attribute is not an error.
-findAttr :: Text -> [Binding a] -> Either Warning (Maybe a)
-findAttr name bs = case catMaybes (matchAttr name <$> bs) of
-  [x] -> pure (Just x)
-  []  -> pure Nothing
-  _   -> Left (DuplicateAttrs name)
-
--- | Returns 'Just value' if this attribute's key matches the text, otherwise
--- Nothing.
-matchAttr :: Text -> Binding a -> Maybe a
-matchAttr t = \case
-  NamedVar (StaticKey t' :|[]) x _ | t == t' -> Just x
-  NamedVar _ _ _ -> Nothing
-  Inherit _ _ _  -> Nothing
 
 -- Takes an ISO 8601 date and returns just the day portion.
 parseISO8601DateToDay :: Text -> Either Warning Day

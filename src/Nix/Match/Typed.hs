@@ -79,6 +79,8 @@ import           Nix.TH
 -- the holes present in the expression. These will have type 'NExpr' if they
 -- are required, and @Maybe 'NExpr'@ if they are optional.
 --
+-- This requires ViewPatterns, TypeApplications and DataKinds
+--
 -- >>> case [nix|{a="hello";}|] of [matchNix|{a=^a;}|] -> a
 -- Fix (NStr (DoubleQuoted [Plain "hello"]))
 --
@@ -101,6 +103,8 @@ matchNix = QuasiQuoter { quoteExp  = typedMatcherExp
 -- The expression has the type @'TypedMatcher' opts reqs 'NExprLocF'@ where
 -- @opts@ and @reqs@ are the optional and required holes from the source
 -- expression.
+--
+-- This requires ViewPatterns, TypeApplications and DataKinds
 --
 -- The pattern, if matched, will bring into scope variables named according to
 -- the holes present in the expression. These will have type 'NExprLoc' if they
