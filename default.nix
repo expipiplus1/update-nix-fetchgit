@@ -16,8 +16,9 @@ let
         {
           prettyprinter = self.prettyprinter_1_7_0; # at least 1.7
           hnix = appendPatches super.hnix [
-            ./hnix-generic1-nkeyname.patch
             ./hnix-fix-qq.patch
+            ./hnix-generic1-nkeyname.patch
+            ./hnix-lexeme-sourcepos.patch
           ];
           data-fix = self.data-fix_0_3_0;
         } // pkgs.lib.optionalAttrs hoogle {
