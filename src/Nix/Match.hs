@@ -1,9 +1,22 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | A set of functions for matching on Nix expression trees and extracting the
 -- values of sub-trees.
@@ -15,28 +28,36 @@ module Nix.Match
   , WithHoles(..)
   , addHoles
   , addHolesLoc
+  , isOptionalPath
   ) where
 
+import           Control.Category               ( (>>>) )
+import           Control.Monad                  ( void )
+import           Data.Data
 import           Data.Fix
 import           Data.Foldable
-import           Data.List                      ( sortOn )
 import           Data.List.NonEmpty             ( NonEmpty )
-import           Data.Monoid
+import           Data.Maybe
+import           Data.Monoid             hiding ( All )
 import           Data.Text                      ( Text )
+import qualified Data.Text                     as T
+import           GHC.Base                       ( NonEmpty((:|)) )
 import           GHC.Generics
 import           Nix
-import           Control.Category               ( (>>>) )
 
 -- | Like 'Fix' but each layer could instead be a 'Hole'
 data WithHoles t v
   = Hole !v
   | Term !(t (WithHoles t v))
 
+deriving instance (Typeable t, Data (t (WithHoles t v)), Data v) => Data (WithHoles t v)
+
 -- | Match a tree with holes against a tree without holes, returning the values
 -- of the holes if it matches.
 --
 -- 'NExprF' and 'NExprLocF' are both instances of 'Matchable'. 'NExprLocF' does
--- not require the annotations to match.
+-- not require the annotations to match. Please see the 'Matchable' instance
+-- documentation for 'NExprF' for more details.
 --
 -- >>> import Nix.TH
 -- >>> match (addHoles [nix|{foo = x: ^foo; bar = ^bar;}|]) [nix|{foo = x: "hello"; bar = "world"; baz = "!";}|]
@@ -52,6 +73,12 @@ match = fmap (`appEndo` []) .: go
 
 -- | Find all the needles in a haystack, returning the matched expression as
 -- well as their filled holes. Results are returned productively in preorder.
+--
+-- >>> import Nix.TH
+-- >>> import Control.Arrow
+-- >>> pretty = prettyNix *** (fmap @[] (fmap @((,) Text) prettyNix))
+-- >>> pretty <$> findMatches (addHoles [nix|{x=^x;}|]) [nix|{x=1;a={x=2;};}|]
+-- [({ x = 1; a = { x = 2; }; },[("x",1)]),({ x = 2; },[("x",2)])]
 findMatches
   :: Matchable t
   => WithHoles t v
@@ -114,35 +141,78 @@ zipMatchLeft2 a b = zipMatchLeft a b >>= traverse (uncurry zipMatchLeft)
 -- - For attrsets and let bindings, the matching is done on the needle's keys
 --   only. i.e. the matchee may have extra keys which are ignored.
 --
+-- - For attrsets and let bindings, bindings which have a LHS beginning with
+--   @_@ are treated as optional. If they are not present then any holes on
+--   their RHS will not be filled.
+--
+-- - Attrsets match ignoring recursiveness
+--
 -- - If a function in the needle has @_@ as its parameter, it matches
 --   everything, so @_@ acts as a wildcard pattern.
 instance Matchable NExprF where
 
-  zipMatchLeft (NSet t1 bs1) (NSet t2 bs2) =
-    let (bs1', bs2') = reduceBindings bs1 bs2
-    in  to1 <$> gZipMatchLeft (from1 (NSet t1 bs1')) (from1 (NSet t2 bs2'))
+  zipMatchLeft (NSet _ bs1) (NSet _ bs2) = do
+    (bs1', bs2') <- unzip <$> reduceBindings bs1 bs2
+    to1 <$> gZipMatchLeft (from1 (NSet NNonRecursive bs1'))
+                          (from1 (NSet NNonRecursive bs2'))
 
-  zipMatchLeft (NLet bs1 e1) (NLet bs2 e2) =
-    let (bs1', bs2') = reduceBindings bs1 bs2
-    in  to1 <$> gZipMatchLeft (from1 (NLet bs1' e1)) (from1 (NLet bs2' e2))
+  zipMatchLeft (NLet bs1 e1) (NLet bs2 e2) = do
+    (bs1', bs2') <- unzip <$> reduceBindings bs1 bs2
+    to1 <$> gZipMatchLeft (from1 (NLet bs1' e1)) (from1 (NLet bs2' e2))
 
   zipMatchLeft (NAbs (Param "_") e1) (NAbs _ e2) = do
     pure $ NAbs (Param "_") (e1, e2)
 
   zipMatchLeft l r = to1 <$> gZipMatchLeft (from1 l) (from1 r)
 
--- Don't filter bindings in the needle, as they must all be present
-reduceBindings :: [Binding q] -> [Binding r] -> ([Binding q], [Binding r])
+-- | Bindings are compared on top level structure only.
+--
+-- Doesn't filter bindings in the needle, as they must all be present
+--
+-- Bindings are returned according to their order in the needle.
+--
+-- Any optional (name begins with @_@) bindings may be removed from the needle.
+--
+-- Left hand sides are matched purely on the top level structure, this means
+-- that "${a}" and "${b}" appear the same to this function, and it may not
+-- match them up correctly.
+reduceBindings :: [Binding q] -> [Binding r] -> Maybe [(Binding q, Binding r)]
 reduceBindings needle matchee =
-  let sortBindings :: [Binding r] -> [Binding r]
-      sortBindings = sortOn (() <$)
-      filterBindings :: [Binding q] -> [Binding r] -> [Binding r]
-      filterBindings as bs =
-        let simplifyName :: NAttrPath a -> NAttrPath ()
-            simplifyName = fmap (() <$)
-            names        = [ simplifyName p | NamedVar p _ _ <- as ]
-        in  [ b | b@(NamedVar p _ _) <- bs, simplifyName p `elem` names ]
-  in  (sortBindings needle, sortBindings (filterBindings needle matchee))
+  let
+    -- A binding is optional if the lhs starts with a '_', return the same
+    -- binding but without the '_'
+      isOptional = \case
+        NamedVar p e l | Just p' <- isOptionalPath p -> Just (NamedVar p' e l)
+        _ -> Nothing
+
+      -- Get a representation of the left hand side which has an Eq instance
+      -- This will represent some things the samelike "${a}" and "${b}"
+      getLHS = \case
+        NamedVar p _  _ -> Left (fmap void p)
+        Inherit  r ps _ -> Right (void r, fmap void ps)
+  in  sequence
+        [ (n', ) <$> m
+        | -- For each binding in the needle
+          n <- needle
+        , let opt = isOptional n
+              -- | Use the optional demangled version if present
+              n'  = fromMaybe n opt
+              lhs = getLHS n'
+              -- Find the first matching binding in the matchee
+              m   = find ((lhs ==) . getLHS) matchee
+        , -- Skip this element if it is not present in the matchee and is optional in the needle
+          isNothing opt || isJust m
+        ]
+
+-- | Basically: does the path begin with an underscore, if so return it removed
+-- without the underscore.
+isOptionalPath :: NAttrPath r -> Maybe (NAttrPath r)
+isOptionalPath = \case
+  StaticKey n :| [] | Just ('_', t) <- T.uncons n -> Just (StaticKey t :| [])
+  DynamicKey (Plain (DoubleQuoted [Plain n])) :| rs
+    | Just ('_', t) <- T.uncons n -> Just
+      (DynamicKey (Plain (DoubleQuoted [Plain t])) :| rs)
+  _ -> Nothing
 
 --
 -- hnix types
