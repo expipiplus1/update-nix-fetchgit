@@ -10,7 +10,7 @@ When you run `update-nix-fetchgit` on a file, it will:
 - Update the corresponding rev, sha256, and version attributes for each repository.
 - Overwrite the original input file.
 
-Any `version` attribute found in the file will be updated if it is in a set that contains (directly or inderictly) a Git fetch.  The version attribute will be updated to the commit date of the latest HEAD commit in the Git repository, in the time zone of the committer, in "YYYY-MM-DD" format.  If the set contains multiple Git fetches, the latest such date is used.
+Any `version` attribute found in the file will be updated if it is in a set that contains (directly or indirectly) a Git fetch.  The version attribute will be updated to the commit date of the latest HEAD commit in the Git repository, in the time zone of the committer, in "YYYY-MM-DD" format.  If the set contains multiple Git fetches, the latest such date is used.
 
 When this program fetches information from multiple repositories, it runs multiple instances of `nix-prefetch-git` in parallel.
 
