@@ -13,7 +13,6 @@ module Update.Nix.FetchGit
 import           Control.Concurrent.Async       ( mapConcurrently )
 import           Control.Error
 import           Data.Foldable                  ( toList )
-import           Data.Generics.Uniplate.Data    ( para )
 import           Data.Text                      ( Text
                                                 , pack
                                                 )
@@ -49,7 +48,7 @@ processFile filename args = do
         -- If updates are needed, write to the file.
       t' | t' /= t -> do
         Data.Text.IO.writeFile filename t'
-        putStrLn $ "Made " ++ (show $ length us) ++ " changes"
+        putStrLn $ "Made " ++ show (length us) ++ " changes"
 
       _ -> putStrLn "No updates"
  where
@@ -89,7 +88,7 @@ exprToFetchTree = \case
     ^fetcher {
       url = ^url;
       rev = ^rev;
-    }|] | extractFuncName fetcher `elem` [Just "fetchGit"]
+    }|] | (extractFuncName fetcher == Just "fetchGit")
     -> do
       url' <- URL <$> exprText url
       pure $ FetchNode (FetchGitArgs url' rev Nothing)
