@@ -96,5 +96,10 @@ formatWarning (NixPrefetchGitFailed exitCode errorOutput) =
   <> " and error output:\n" <> unpack errorOutput
 formatWarning (InvalidPrefetchGitOutput output) =
   "Error: Output from nix-prefetch-git is invalid:\n" <> show output
+formatWarning (NixPrefetchUrlFailed exitCode errorOutput) =
+  "Error: nix-prefetch-url failed with exit code " <> show exitCode
+  <> " and error output:\n" <> unpack errorOutput
+formatWarning (InvalidPrefetchUrlOutput output) =
+  "Error: Output from nix-prefetch-url is invalid:\n" <> show output
 formatWarning (InvalidDateString text) =
   "Error: Date string is invalid: " <> show text

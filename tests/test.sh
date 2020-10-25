@@ -17,7 +17,7 @@ updater="$( echo ../dist-newstyle/build/*/*/update-nix-fetchgit-*/x/update-nix-f
 
 # Prepares git repositories on the local machine that we will use for
 # testing.
-function prepare_local_test_repos() {
+function prepare_local_test_assets() {
   # Make sure the commit hashes are predictable.
   export GIT_AUTHOR_DATE='1466974421 +0200'
   export GIT_COMMITTER_DATE='1466974421 +0200'
@@ -51,6 +51,9 @@ function prepare_local_test_repos() {
   git commit -m "initial commit"
   popd
 
+  echo hi > test.txt
+  tar czvf archive.tar.gz test.txt
+
   popd
 }
 
@@ -73,7 +76,7 @@ function test_successful_update() {
 }
 
 function run_test_suite() {
-  prepare_local_test_repos > /dev/null
+  prepare_local_test_assets > /dev/null
 
   for f in *.expected.nix; do
     local test_name=$(basename $f .expected.nix)

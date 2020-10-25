@@ -24,22 +24,33 @@ data FetchTree fetchInfo = Node { nodeVersionExpr :: Maybe NExprLoc
                          | FetchNode fetchInfo
   deriving (Show, Data, Functor, Foldable, Traversable)
 
--- | Represents the arguments to a call to fetchgit, fetchFromGitHub
---   or fetchFromGitLab as parsed from a .nix file.
---   sha256Expr will be empty on calls to builtins.fetchGit.
-data FetchGitArgs = FetchGitArgs { repoLocation :: RepoLocation
-                                 , revExpr      :: NExprLoc
-                                 , sha256Expr   :: Maybe NExprLoc
-                                 }
+-- | Represents the arguments to a call to a fetcher as parsed from a .nix
+-- file. sha256Expr will be empty on calls to builtins.fetchGit.
+data FetchArgs
+  = FetchGitArgs
+    { repoLocation :: RepoLocation
+    , revExpr      :: NExprLoc
+    , sha256Expr   :: Maybe NExprLoc
+    }
+  | FetchTarballArgs
+    { tarballLocation :: Text
+    , sha256Expr      :: Maybe NExprLoc
+    }
   deriving (Show, Data)
 
--- | Updated information about a fetchgit call that was retrieved from
--- the internet.
-data FetchGitLatestInfo = FetchGitLatestInfo { originalInfo :: FetchGitArgs
-                                             , latestRev    :: Text
-                                             , latestSha256 :: Text
-                                             , latestDate   :: Day
-                                             }
+-- | Updated information about a fetcher call that was retrieved from the
+-- internet.
+data FetchLatestInfo
+  = FetchGitLatestInfo
+    { originalInfo :: FetchArgs
+    , latestRev    :: Text
+    , latestSha256 :: Text
+    , latestDate   :: Day
+    }
+  | FetchTarballLatestInfo
+    { originalInfo :: FetchArgs
+    , latestSha256 :: Text
+    }
   deriving (Show, Data)
 
 -- | A repo is either specified by URL or by Github owner/repo.

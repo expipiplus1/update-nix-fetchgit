@@ -13,4 +13,6 @@ data Warning = CouldNotParseInput (Doc Void)
              | NotAString NExprLoc
              | NixPrefetchGitFailed Int Text
              | InvalidPrefetchGitOutput Text
+             | NixPrefetchUrlFailed Int Text
+             | InvalidPrefetchUrlOutput Text
              | InvalidDateString Text
