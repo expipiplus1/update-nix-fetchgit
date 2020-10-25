@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE TypeApplications  #-}
 {-# LANGUAGE ViewPatterns      #-}
@@ -66,14 +67,14 @@ updatesFromFile f extraArgs = runExceptT $ do
   treeWithLatest <-
     ExceptT
     $   sequenceA
-    <$> mapConcurrently (getFetchGitLatestInfo extraArgs) treeWithArgs
+    <$> mapConcurrently (getFetchLatestInfo extraArgs) treeWithArgs
   pure (fetchTreeToSpanUpdates treeWithLatest)
 
 --------------------------------------------------------------------------------
 -- Extracting information about fetches from the AST
 --------------------------------------------------------------------------------
 
-exprToFetchTree :: NExprLoc -> Either Warning (FetchTree FetchGitArgs)
+exprToFetchTree :: NExprLoc -> Either Warning (FetchTree FetchArgs)
 exprToFetchTree = \case
   [matchNixLoc|
     ^fetcher {
@@ -88,7 +89,7 @@ exprToFetchTree = \case
     ^fetcher {
       url = ^url;
       rev = ^rev;
-    }|] | (extractFuncName fetcher == Just "fetchGit")
+    }|] | Just "fetchGit" <- extractFuncName fetcher
     -> do
       url' <- URL <$> exprText url
       pure $ FetchNode (FetchGitArgs url' rev Nothing)
@@ -107,6 +108,14 @@ exprToFetchTree = \case
       owner' <- exprText owner
       repo' <- exprText repo
       pure $ FetchNode (FetchGitArgs (fun owner' repo') rev (Just sha256))
+  [matchNixLoc|
+    ^fetcher {
+      url = ^url;
+      _sha256 = ^sha256;
+    }|] | Just "fetchTarball" <- extractFuncName fetcher
+    -> do
+      url' <- exprText url
+      pure $ FetchNode (FetchTarballArgs url' sha256)
   e@[matchNixLoc|{
       _version = ^version;
     }|] -> Node version <$> traverse exprToFetchTree (toList (unFix e))
@@ -116,23 +125,31 @@ exprToFetchTree = \case
 -- Getting updated information from the internet.
 --------------------------------------------------------------------------------
 
-getFetchGitLatestInfo
-  :: [Text] -> FetchGitArgs -> IO (Either Warning FetchGitLatestInfo)
-getFetchGitLatestInfo extraArgs args = runExceptT $ do
-  o <- ExceptT (nixPrefetchGit extraArgs (extractUrlString $ repoLocation args))
-  d <- hoistEither (parseISO8601DateToDay (date o))
-  pure $ FetchGitLatestInfo args (rev o) (sha256 o) d
+getFetchLatestInfo
+  :: [Text] -> FetchArgs -> IO (Either Warning FetchLatestInfo)
+getFetchLatestInfo extraArgs args = runExceptT $ do
+  case args of
+    FetchGitArgs {..} -> do
+      o <- ExceptT $ nixPrefetchGit extraArgs (extractUrlString repoLocation)
+      d <- hoistEither (parseISO8601DateToDay (date o))
+      pure $ FetchGitLatestInfo args (rev o) (sha256 o) d
+    FetchTarballArgs {..} -> do
+      o <- ExceptT $ nixPrefetchUrl extraArgs tarballLocation
+      pure $ FetchTarballLatestInfo args o
 
 --------------------------------------------------------------------------------
 -- Deciding which parts of the Nix file should be updated and how.
 --------------------------------------------------------------------------------
 
-fetchTreeToSpanUpdates :: FetchTree FetchGitLatestInfo -> [SpanUpdate]
+fetchTreeToSpanUpdates :: FetchTree FetchLatestInfo -> [SpanUpdate]
 fetchTreeToSpanUpdates node@(Node _ cs) =
   concatMap fetchTreeToSpanUpdates cs ++ toList (maybeUpdateVersion node)
-fetchTreeToSpanUpdates (FetchNode f) = catMaybes [Just revUpdate, sha256Update]
+fetchTreeToSpanUpdates (FetchNode f) = catMaybes [revUpdate, sha256Update]
  where
-  revUpdate = SpanUpdate (exprSpan (revExpr args)) (quoteString (latestRev f))
+  revUpdate = case args of
+    FetchGitArgs {..} ->
+      Just $ SpanUpdate (exprSpan revExpr) (quoteString (latestRev f))
+    FetchTarballArgs {..} -> Nothing
   sha256Update = SpanUpdate <$> (exprSpan <$> sha256Expr args) <*> Just
     (quoteString (latestSha256 f))
   args = originalInfo f
@@ -141,8 +158,11 @@ fetchTreeToSpanUpdates (FetchNode f) = catMaybes [Just revUpdate, sha256Update]
 -- string, decides whether and how that version string should be
 -- updated.  We basically just take the maximum latest commit date of
 -- all the fetches in the children.
-maybeUpdateVersion :: FetchTree FetchGitLatestInfo -> Maybe SpanUpdate
+maybeUpdateVersion :: FetchTree FetchLatestInfo -> Maybe SpanUpdate
 maybeUpdateVersion node@(Node (Just versionExpr) _) = do
-  maxDay <- (maximumMay . fmap latestDate . toList) node
+  let latestDateMay = \case
+        FetchGitLatestInfo {..}  -> Just latestDate
+        FetchTarballLatestInfo{} -> Nothing
+  maxDay <- maximumMay . mapMaybe latestDateMay . toList $ node
   pure $ SpanUpdate (exprSpan versionExpr) ((quoteString . pack . show) maxDay)
 maybeUpdateVersion _ = Nothing

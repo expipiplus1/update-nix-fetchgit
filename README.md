@@ -1,12 +1,27 @@
 # update-nix-fetchgit
 
-This is a command-line utility for updating `fetchgit`, `fetchgitPrivate`, and `fetchFromGitHub` calls in [Nix](http://nixos.org/nix/) expressions.  This utility is meant to be used by people maintaining Nix expressions that fetch files from Git repositories.  It automates the process of keeping such expressions up-to-date with the latest upstream sources.
+This is a command-line utility for updating fetcher calls in
+[Nix](http://nixos.org/nix/) expressions.  This utility is meant to be used by
+people maintaining Nix expressions that fetch files from Git repositories.  It
+automates the process of keeping such expressions up-to-date with the latest
+upstream sources.
+
+The following fetchers are supported:
+
+- `fetchgit`
+- `fetchgitPrivate`
+- `fetchFromGitHub`
+- `fetchFromGitLab`
+- `builtins.fetchGit`
+- `builtins.fetchTarball` (Just updates the hash)
 
 When you run `update-nix-fetchgit` on a file, it will:
 
 - Read the file and parse it as a Nix expression.
-- Find all Git fetches (calls to `fetchgit`, `fetchgitPrivate`, `fetchFromGitHub` or `fetchFromGitLab`).
-- Run [`nix-prefetch-git`](https://github.com/NixOS/nixpkgs/blob/master/pkgs/build-support/fetchgit/nix-prefetch-git) to get information about the latest HEAD commit of each repository.
+- Find all calls to fetchers.
+- Run
+  [`nix-prefetch-git`](https://github.com/NixOS/nixpkgs/blob/master/pkgs/build-support/fetchgit/nix-prefetch-git)
+  or nix-prefetch-url to get information about the latest version.
 - Update the corresponding rev, sha256, and version attributes for each repository.
 - Overwrite the original input file.
 
