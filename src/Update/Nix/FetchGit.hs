@@ -7,34 +7,32 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Update.Nix.FetchGit
-  ( updatesFromFile
-  , processFile
+  ( processFile
+  , processText
+  , updatesFromText
   ) where
 
-import           Control.Monad.Except
-import           Data.Foldable                  ( asum
-                                                , toList
-                                                )
+import           Data.Fix
+import           Data.Foldable
 import           Data.Maybe
-import           Data.Text                      ( pack
+import           Data.Text                      ( Text
+                                                , pack
                                                 )
+import qualified Data.Text                     as T
+import qualified Data.Text.IO
+import           Data.Time                      ( Day )
+import qualified Data.Vector                   as V
 import           Nix.Comments
 import           Nix.Expr
 import           Nix.Match.Typed
+import           Say
+import           System.Exit
+import           System.IO
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Warning
 import           Update.Nix.Updater
 import           Update.Span
-
-import           Data.Fix
-import qualified Data.Text                     as T
-import qualified Data.Text.IO
-import qualified Data.Text.IO                  as T
-import qualified Data.Vector                   as V
-import qualified System.Exit
-import qualified System.IO
-import Data.Time (Day)
 
 
 --------------------------------------------------------------------------------
@@ -44,34 +42,37 @@ import Data.Time (Day)
 -- | Provided FilePath, update Nix file in-place
 processFile :: FilePath -> IO ()
 processFile filename = do
-  t <- Data.Text.IO.readFile filename
-  -- Get the updates from this file.
-  updatesFromFile filename >>= \case
-    -- If we have any errors, print them and finish.
-    Left  ws -> printErrorAndExit ws
-    -- Update the text of the file in memory.
-    Right us -> case updateSpans us t of
-      t' | t' /= t -> do
-        -- If updates are needed, write to the file.
-        Data.Text.IO.writeFile filename t'
-        putStrLn $ "Made " ++ show (length us) ++ " changes"
-      _ -> putStrLn "No updates"
+  t  <- Data.Text.IO.readFile filename
+  t' <- processText t
+  if t == t'
+    then sayErr "No updates"
+    else do
+      -- If updates are needed, write to the file.
+      Data.Text.IO.writeFile filename t'
+
+processText :: Text -> IO Text
+processText t = runM (updatesFromText t) >>= \case
+  -- If we have any errors, print them and finish.
+  Left  ws -> printErrorAndExit ws
+  -- Update the text of the file in memory.
+  Right us -> do
+    sayErrString $ "Made " ++ show (length us) ++ " changes"
+    pure $ updateSpans us t
  where
-  printErrorAndExit :: Warning -> IO ()
+  printErrorAndExit :: [Warning] -> IO a
   printErrorAndExit e = do
-    System.IO.hPutStrLn System.IO.stderr (formatWarning e)
-    System.Exit.exitFailure
+    traverse_ (hPutStrLn stderr . formatWarning) e
+    exitFailure
 
 -- | Given the path to a Nix file, returns the SpanUpdates
 -- all the parts of the file we want to update.
-updatesFromFile :: FilePath -> IO (Either Warning [SpanUpdate])
-updatesFromFile f = runExceptT $ do
-  t <- liftIO $ T.readFile f
+updatesFromText :: Text -> M [SpanUpdate]
+updatesFromText t = do
   let nixLines = V.fromList (T.lines t)
       getComment sourceLines =
         annotation . getCompose . unFix . annotateWithComments sourceLines
-  tree <- ExceptT . pure $ do
-    expr <- ourParseNixText t
+  tree <- do
+    expr <- fromEither $ ourParseNixText t
     findUpdates (getComment nixLines) expr
   evalUpdates tree
 
@@ -79,8 +80,7 @@ updatesFromFile f = runExceptT $ do
 -- Finding updates
 ----------------------------------------------------------------
 
-findUpdates
-  :: (NExprLoc -> Maybe Comment) -> NExprLoc -> Either Warning FetchTree
+findUpdates :: (NExprLoc -> Maybe Comment) -> NExprLoc -> M FetchTree
 findUpdates getComment e =
   let updaters = (\u -> u getComment e) <$> fetchers
   in
@@ -92,10 +92,10 @@ findUpdates getComment e =
         _ ->
           Node Nothing <$> traverse (findUpdates getComment) (toList (unFix e))
 
-evalUpdates :: FetchTree -> ExceptT Warning IO [SpanUpdate]
+evalUpdates :: FetchTree -> M [SpanUpdate]
 evalUpdates = fmap snd . go
  where
-  go :: FetchTree -> ExceptT Warning IO (Maybe Day, [SpanUpdate])
+  go :: FetchTree -> M (Maybe Day, [SpanUpdate])
   go = \case
     UpdaterNode (Updater u) -> u
     Node versionExpr cs     -> do

@@ -21,6 +21,8 @@ let
             ./hnix-lexeme-sourcepos.patch
           ];
           data-fix = self.data-fix_0_3_0;
+          optparse-generic = self.optparse-generic_1_4_4;
+          optparse-applicative = self.optparse-applicative_0_16_0_0;
         } // pkgs.lib.optionalAttrs hoogle {
           ghc = super.ghc // { withPackages = super.ghc.withHoogle; };
           ghcWithPackages = self.ghc.withPackages;

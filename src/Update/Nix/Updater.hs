@@ -11,26 +11,26 @@ module Update.Nix.Updater
   ( fetchers
   ) where
 
-import           Control.Monad.Except
-import           Data.Text                      (splitOn,  Text )
+import           Data.Maybe
+import           Data.Text                      ( Text
+                                                , splitOn
+                                                )
 import           Nix                            ( NExprLoc )
 import           Nix.Comments
 import           Nix.Match.Typed
 import qualified Update.Nix.FetchGit.Prefetch  as P
-import           Update.Nix.FetchGit.Prefetch   (getGitHubRevisionDate,  Revision(..)
+import           Update.Nix.FetchGit.Prefetch   ( Revision(..)
                                                 , getGitFullName
+                                                , getGitHubRevisionDate
                                                 , getGitRevision
                                                 , nixPrefetchGit
                                                 , nixPrefetchUrl
                                                 )
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Utils
-import           Update.Nix.FetchGit.Warning
 import           Update.Span
-import Data.Maybe
 
-type Fetcher
-  = (NExprLoc -> Maybe Comment) -> NExprLoc -> Maybe (Either Warning Updater)
+type Fetcher = (NExprLoc -> Maybe Comment) -> NExprLoc -> Maybe (M Updater)
 
 fetchers :: [Fetcher]
 fetchers =
@@ -50,7 +50,7 @@ fetchgitUpdater getComment = \case
       sha256 = ^sha256;
     }|] | extractFuncName fetcher `elem` [Just "fetchgit", Just "fetchgitPrivate"]
     -> Just $ do
-      url' <- URL <$> exprText url
+      url' <- fromEither $ URL <$> exprText url
       let desiredRev = Revision <$> getComment rev
       pure $ gitUpdater url' desiredRev rev (Just sha256)
   _ -> Nothing
@@ -63,7 +63,7 @@ builtinsFetchGitUpdater getComment = \case
       rev = ^rev; # rev
     }|] | Just "fetchGit" <- extractFuncName fetcher
     -> Just $ do
-      url' <- URL <$> exprText url
+      url' <- fromEither $ URL <$> exprText url
       let desiredRev = Revision <$> getComment rev
       pure $ gitUpdater url' desiredRev rev Nothing
   _ -> Nothing
@@ -100,7 +100,7 @@ builtinsFetchTarballUpdater _ = \case
       sha256 = ^sha256;
     }|] | Just "fetchTarball" <- extractFuncName fetcher
     -> Just $ do
-      url' <- exprText url
+      url' <- fromEither $ exprText url
       pure $ tarballUpdater url' sha256
   _ -> Nothing
 
@@ -117,8 +117,8 @@ fetchGitHubUpdater getComment = \case
                         "fetchFromGitLab" -> Just GitLab
                         _ -> Nothing
     -> Just $ do
-      owner' <- exprText owner
-      repo' <- exprText repo
+      owner' <- fromEither $ exprText owner
+      repo' <- fromEither $ exprText repo
       let desiredRev = Revision <$> getComment rev
       pure $ gitUpdater (fun owner' repo') desiredRev rev (Just sha256)
   _ -> Nothing
@@ -142,8 +142,8 @@ gitUpdater repoLocation revision revExpr sha256Expr = Updater $ do
   revArgs <- maybe (pure [])
                    (fmap (("--rev" :) . pure) . getGitFullName repoUrl)
                    revision
-  o <- ExceptT $ nixPrefetchGit revArgs repoUrl
-  d <- ExceptT . pure $ parseISO8601DateToDay (P.date o)
+  o <- nixPrefetchGit revArgs repoUrl
+  d <- fromEither $ parseISO8601DateToDay (P.date o)
   pure
     ( Just d
     , [ SpanUpdate (exprSpan e) (quoteString (P.sha256 o))
@@ -159,7 +159,5 @@ tarballUpdater
   -- ^ sha256
   -> Updater
 tarballUpdater url sha256Expr = Updater $ do
-  sha256 <- ExceptT $ nixPrefetchUrl [] url
+  sha256 <- nixPrefetchUrl [] url
   pure (Nothing, [SpanUpdate (exprSpan sha256Expr) (quoteString sha256)])
-
-

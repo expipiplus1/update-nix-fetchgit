@@ -12,7 +12,8 @@ module Update.Nix.FetchGit.Prefetch
   , Revision(..)
   ) where
 
-import           Control.Monad.Except
+import           Control.Monad                  ( guard )
+import           Control.Monad.IO.Class         ( MonadIO(liftIO) )
 import           Data.Aeson                     ( FromJSON
                                                 , decode
                                                 )
@@ -27,7 +28,8 @@ import           GHC.Generics
 import           GitHub.REST
 import           System.Exit                    ( ExitCode(..) )
 import           System.Process                 ( readProcessWithExitCode )
-import           Update.Nix.FetchGit.Utils      ( parseISO8601DateToDay )
+import           Update.Nix.FetchGit.Types
+import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Warning
 
 
@@ -43,14 +45,14 @@ data NixPrefetchGitOutput = NixPrefetchGitOutput{ url    :: Text
 nixPrefetchGit
   :: [Text] -- ^ Extra arguments for nix-prefetch-git
   -> Text   -- ^ The URL to prefetch
-  -> IO (Either Warning NixPrefetchGitOutput)
-nixPrefetchGit extraArgs prefetchURL = runExceptT $ do
+  -> M NixPrefetchGitOutput
+nixPrefetchGit extraArgs prefetchURL = do
   (exitCode, nsStdout, nsStderr) <- liftIO $ readProcessWithExitCode
     "nix-prefetch-git"
     (map unpack extraArgs ++ [unpack prefetchURL])
     ""
   case exitCode of
-    ExitFailure e -> throwError (NixPrefetchGitFailed e (pack nsStderr))
+    ExitFailure e -> refute1 (NixPrefetchGitFailed e (pack nsStderr))
     ExitSuccess   -> pure ()
   note (InvalidPrefetchGitOutput (pack nsStdout)) (decode (fromString nsStdout))
 
@@ -58,14 +60,14 @@ nixPrefetchGit extraArgs prefetchURL = runExceptT $ do
 nixPrefetchUrl
   :: [Text] -- ^ Extra arguments for nix-prefetch-url
   -> Text   -- ^ The URL to prefetch
-  -> IO (Either Warning Text) -- The sha256 output
-nixPrefetchUrl extraArgs prefetchURL = runExceptT $ do
+  -> M Text -- The sha256 output
+nixPrefetchUrl extraArgs prefetchURL = do
   (exitCode, nsStdout, nsStderr) <- liftIO $ readProcessWithExitCode
     "nix-prefetch-url"
     ("--unpack" : map unpack extraArgs ++ [unpack prefetchURL])
     ""
   case exitCode of
-    ExitFailure e -> throwError (NixPrefetchUrlFailed e (pack nsStderr))
+    ExitFailure e -> refute1 (NixPrefetchUrlFailed e (pack nsStderr))
     ExitSuccess   -> pure ()
   note (InvalidPrefetchUrlOutput (pack nsStdout))
        (parseSHA256 (T.strip . T.pack $ nsStdout))
@@ -74,52 +76,54 @@ newtype Revision = Revision { unRevision :: Text }
 
 -- | Discover if this ref is a branch or a tag
 --
--- >>> runExceptT $ getGitFullName "https://github.com/expipiplus1/update-nix-fetchgit" "0.1.0.0"
+-- >>> runM $ getGitFullName "https://github.com/expipiplus1/update-nix-fetchgit" (Revision "0.1.0.0")
 -- Right "refs/tags/0.1.0.0"
 --
--- >>> runExceptT $ getGitFullName "https://github.com/expipiplus1/update-nix-fetchgit" "joe-fetchTarball"
+-- >>> runM $ getGitFullName "https://github.com/expipiplus1/update-nix-fetchgit" (Revision "joe-fetchTarball")
 -- Right "refs/heads/joe-fetchTarball"
 getGitFullName
-  :: Text -- ^ git repo location
-  -> Revision -- ^ branch or tag name
-  -> ExceptT Warning IO Text
+  :: Text
+  -- ^ git repo location
+  -> Revision
+  -- ^ branch or tag name
+  -> M Text
   -- ^ Full name, i.e. with refs/heads/ or refs/tags/
 getGitFullName repo revision = do
   (stdoutText, rs) <- gitLsRemotes repo revision
   case rs of
     [_hash, name] : _ -> pure name
-    _                 -> throwError $ InvalidGitLsRemoteOutput stdoutText
+    _                 -> refute1 $ InvalidGitLsRemoteOutput stdoutText
 
 -- | Return a tag or a hash
 getGitRevision
-  :: Text -- ^ git repo location
-  -> Revision -- ^ branch or tag name
-  -> ExceptT Warning IO Text
+  :: Text
+  -- ^ git repo location
+  -> Revision
+  -- ^ branch or tag name
+  -> M Text
   -- ^ Full name, i.e. with refs/heads/ or refs/tags/
 getGitRevision repo revision = do
   (stdoutText, rs) <- gitLsRemotes repo revision
   case rs of
     [hash, name] : _ | Just tag <- stripPrefix "refs/tags/" name -> pure tag
                      | otherwise -> pure hash
-    _ -> throwError $ InvalidGitLsRemoteOutput stdoutText
+    _ -> refute1 $ InvalidGitLsRemoteOutput stdoutText
 
-gitLsRemotes :: Text -> Revision -> ExceptT Warning IO (Text, [[Text]])
+gitLsRemotes :: Text -> Revision -> M (Text, [[Text]])
 gitLsRemotes repo revision = do
   (exitCode, nsStdout, nsStderr) <- liftIO $ readProcessWithExitCode
     "git"
     ["ls-remote", T.unpack repo, T.unpack (unRevision revision)]
     ""
   case exitCode of
-    ExitFailure e -> throwError (NixPrefetchGitFailed e (pack nsStderr))
+    ExitFailure e -> refute1 (NixPrefetchGitFailed e (pack nsStderr))
     ExitSuccess   -> pure ()
   let stdoutText = T.pack nsStdout
   case fmap T.words . T.lines $ stdoutText of
-    [] -> throwError (NoSuchRef (unRevision revision))
+    [] -> refute1 (NoSuchRef (unRevision revision))
     rs -> pure (stdoutText, rs)
 
--- >>> runExceptT $ getGitHubRevisionDate "expipiplus1" "update-nix-fetchgit" (Revision "0.1.0.0")
-getGitHubRevisionDate
-  :: Text -> Text -> Revision -> ExceptT Warning IO Day
+getGitHubRevisionDate :: Text -> Text -> Revision -> M Day
 getGitHubRevisionDate owner repo revision = do
   dateString <- runGitHubT ghState $ do
     ref <- queryGitHub GHEndpoint
@@ -132,7 +136,7 @@ getGitHubRevisionDate owner repo revision = do
       , ghData       = []
       }
     pure $ ref .: "commit" .: "committer" .: "date"
-  ExceptT . pure $ parseISO8601DateToDay dateString
+  fromEither $ parseISO8601DateToDay dateString
 
 ghState :: GitHubState
 ghState = GitHubState { token      = Nothing
@@ -153,9 +157,6 @@ parseSHA256 t = do
   base32Chars    = "0123456789abcdfghijklmnpqrsvwxyz" :: String
   sha256HashSize = 32
   base32Length   = (sha256HashSize * 8 - 1) `quot` 5 + 1
-
-note :: Monad m => e -> Maybe a -> ExceptT e m a
-note e = maybe (throwError e) pure
 
 stripPrefix :: Text -> Text -> Maybe Text
 stripPrefix p t = if p `T.isPrefixOf` t
