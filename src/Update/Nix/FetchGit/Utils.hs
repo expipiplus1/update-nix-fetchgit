@@ -23,6 +23,7 @@ import           Data.Text                      ( Text
                                                 )
 import           Data.Time                      ( defaultTimeLocale
                                                 , parseTimeM
+                                                , Day
                                                 )
 import           Nix.Expr                hiding ( SourcePos )
 import           Nix.Parser                     ( Result(..)
