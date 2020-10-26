@@ -70,8 +70,9 @@ updatesFromFile :: FilePath -> [Text] -> IO (Either Warning [SpanUpdate])
 updatesFromFile f extraArgs = runExceptT $ do
   t <- liftIO $ T.readFile f
   let nixLines = V.fromList (T.lines t)
-  expr           <- ExceptT $ ourParseNixFile f
-  treeWithArgs   <- ExceptT . pure $ exprToFetchTree nixLines expr
+  treeWithArgs <- ExceptT . pure $ do
+    expr <- ourParseNixText t
+    exprToFetchTree nixLines expr
   treeWithLatest <-
     ExceptT
     $   sequenceA
