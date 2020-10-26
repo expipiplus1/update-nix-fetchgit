@@ -29,22 +29,19 @@ import           Nix.Parser                     ( Result(..)
                                                 , parseNixFileLoc
                                                 , parseNixTextLoc
                                                 )
-import           Nix.Reduce
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
 
-ourParseNixText :: Text -> IO (Either Warning NExprLoc)
-ourParseNixText t =
-  case parseNixTextLoc t of
-    Failure parseError -> pure $ Left (CouldNotParseInput parseError)
-    Success expr -> pure <$> reduceExpr Nothing expr
+ourParseNixText :: Text -> Either Warning NExprLoc
+ourParseNixText t = case parseNixTextLoc t of
+  Failure parseError -> Left (CouldNotParseInput parseError)
+  Success expr       -> pure expr
 
 ourParseNixFile :: FilePath -> IO (Either Warning NExprLoc)
-ourParseNixFile f =
-  parseNixFileLoc f >>= \case
-    Failure parseError -> pure $ Left (CouldNotParseInput parseError)
-    Success expr -> pure <$> reduceExpr Nothing expr
+ourParseNixFile f = parseNixFileLoc f >>= \case
+  Failure parseError -> pure $ Left (CouldNotParseInput parseError)
+  Success expr       -> pure (Right expr)
 
 -- | Get the url from either a nix expression for the url or a repo and owner
 -- expression.
