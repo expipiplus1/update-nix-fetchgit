@@ -9,9 +9,7 @@ module Update.Nix.FetchGit.Prefetch
   , getGitFullName
   ) where
 
-import           Control.Error
-import           Control.Monad                  ( guard )
-import           Control.Monad.IO.Class         ( liftIO )
+import           Control.Monad.Except
 import           Data.Aeson                     ( FromJSON
                                                 , decode
                                                 )
@@ -45,10 +43,10 @@ nixPrefetchGit extraArgs prefetchURL = runExceptT $ do
     "nix-prefetch-git"
     (map unpack extraArgs ++ [unpack prefetchURL])
     ""
-  hoistEither $ case exitCode of
-    ExitFailure e -> Left (NixPrefetchGitFailed e (pack nsStderr))
+  case exitCode of
+    ExitFailure e -> throwError (NixPrefetchGitFailed e (pack nsStderr))
     ExitSuccess   -> pure ()
-  decode (fromString nsStdout) ?? InvalidPrefetchGitOutput (pack nsStdout)
+  note (InvalidPrefetchGitOutput (pack nsStdout)) (decode (fromString nsStdout))
 
 -- | Run nix-prefetch-url --unpack
 nixPrefetchUrl
@@ -60,11 +58,11 @@ nixPrefetchUrl extraArgs prefetchURL = runExceptT $ do
     "nix-prefetch-url"
     ("--unpack" : map unpack extraArgs ++ [unpack prefetchURL])
     ""
-  hoistEither $ case exitCode of
-    ExitFailure e -> Left (NixPrefetchUrlFailed e (pack nsStderr))
+  case exitCode of
+    ExitFailure e -> throwError (NixPrefetchUrlFailed e (pack nsStderr))
     ExitSuccess   -> pure ()
-  parseSHA256 (T.strip . T.pack $ nsStdout)
-    ?? InvalidPrefetchUrlOutput (pack nsStdout)
+  note (InvalidPrefetchUrlOutput (pack nsStdout))
+       (parseSHA256 (T.strip . T.pack $ nsStdout))
 
 -- | Discover if this ref is a branch or a tag
 --
@@ -83,14 +81,14 @@ getGitFullName repo ref = do
     "git"
     ["ls-remote", T.unpack repo, T.unpack ref]
     ""
-  hoistEither $ case exitCode of
-    ExitFailure e -> Left (NixPrefetchGitFailed e (pack nsStderr))
+  case exitCode of
+    ExitFailure e -> throwError (NixPrefetchGitFailed e (pack nsStderr))
     ExitSuccess   -> pure ()
   let stdoutText = T.pack nsStdout
   case fmap T.words . T.lines $ stdoutText of
-    []                -> throwE (NoSuchRef ref)
+    []                -> throwError (NoSuchRef ref)
     [_hash, name] : _ -> pure name
-    _                 -> throwE $ InvalidGitLsRemoteOutput stdoutText
+    _                 -> throwError $ InvalidGitLsRemoteOutput stdoutText
 
 ----------------------------------------------------------------
 -- Utils
@@ -105,3 +103,6 @@ parseSHA256 t = do
   base32Chars    = "0123456789abcdfghijklmnpqrsvwxyz" :: String
   sha256HashSize = 32
   base32Length   = (sha256HashSize * 8 - 1) `quot` 5 + 1
+
+note :: Monad m => e -> Maybe a -> ExceptT e m a
+note e = maybe (throwError e) pure

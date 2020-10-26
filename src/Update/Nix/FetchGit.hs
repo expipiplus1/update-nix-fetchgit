@@ -12,29 +12,29 @@ module Update.Nix.FetchGit
   ) where
 
 import           Control.Concurrent.Async       ( mapConcurrently )
-import           Control.Error
+import           Control.Monad.Except
 import           Data.Foldable                  ( toList )
+import           Data.Maybe
 import           Data.Text                      ( Text
                                                 , pack
                                                 )
+import           Nix.Comments
 import           Nix.Expr
 import           Nix.Match.Typed
-import           Nix.Comments
 import           Update.Nix.FetchGit.Prefetch
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Utils
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
 
+import           Data.Fix
+import qualified Data.Text                     as T
 import qualified Data.Text.IO
+import qualified Data.Text.IO                  as T
+import           Data.Vector                    ( Vector )
+import qualified Data.Vector                   as V
 import qualified System.Exit
 import qualified System.IO
-import Data.Fix
-import Data.Vector (Vector)
-import qualified Data.Text.IO as T
-import qualified Data.Vector as V
-import qualified Data.Text as T
-import Control.Monad.IO.Class (MonadIO(liftIO))
 
 
 --------------------------------------------------------------------------------
@@ -71,7 +71,7 @@ updatesFromFile f extraArgs = runExceptT $ do
   t <- liftIO $ T.readFile f
   let nixLines = V.fromList (T.lines t)
   expr           <- ExceptT $ ourParseNixFile f
-  treeWithArgs   <- hoistEither $ exprToFetchTree nixLines expr
+  treeWithArgs   <- ExceptT . pure $ exprToFetchTree nixLines expr
   treeWithLatest <-
     ExceptT
     $   sequenceA
@@ -150,7 +150,7 @@ getFetchLatestInfo extraArgs args = runExceptT $ do
                        ref
       let args' = revArgs <> extraArgs
       o <- ExceptT $ nixPrefetchGit args' url
-      d <- hoistEither (parseISO8601DateToDay (date o))
+      d <- ExceptT . pure $ parseISO8601DateToDay (date o)
       pure $ FetchGitLatestInfo args (rev o) (sha256 o) d
     FetchTarballArgs {..} -> do
       o <- ExceptT $ nixPrefetchUrl extraArgs tarballLocation
@@ -185,3 +185,12 @@ maybeUpdateVersion node@(Node (Just versionExpr) _) = do
   maxDay <- maximumMay . mapMaybe latestDateMay . toList $ node
   pure $ SpanUpdate (exprSpan versionExpr) ((quoteString . pack . show) maxDay)
 maybeUpdateVersion _ = Nothing
+
+----------------------------------------------------------------
+-- Utils
+----------------------------------------------------------------
+
+maximumMay :: Ord a => [a] -> Maybe a
+maximumMay = \case
+  [] -> Nothing
+  xs -> Just (maximum xs)
