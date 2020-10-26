@@ -49,11 +49,10 @@ processFile filename args = do
   updatesFromFile filename args >>= \case
     -- If we have any errors, print them and finish.
     Left  ws -> printErrorAndExit ws
-    Right us ->
-      -- Update the text of the file in memory.
-                case updateSpans us t of
-        -- If updates are needed, write to the file.
+    -- Update the text of the file in memory.
+    Right us -> case updateSpans us t of
       t' | t' /= t -> do
+        -- If updates are needed, write to the file.
         Data.Text.IO.writeFile filename t'
         putStrLn $ "Made " ++ show (length us) ++ " changes"
 
