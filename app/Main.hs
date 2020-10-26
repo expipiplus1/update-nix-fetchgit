@@ -1,17 +1,48 @@
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Main where
 
-import qualified System.Environment
-import qualified System.Exit
-import qualified Update.Nix.FetchGit
+import           Options.Applicative
+import           Options.Generic         hiding ( metavar )
+import Update.Nix.FetchGit
+import qualified Data.Text.IO as T
+import Data.Foldable
 
 main :: IO ()
-main =
-  -- Super simple command line parsing at the moment, just look for one
-  -- filename and optionally pass extra arguments to `nix-prefetch-git`.
-       System.Environment.getArgs >>= \case
-  [filename] -> Update.Nix.FetchGit.processFile filename
-  _          -> do
-    putStrLn "Usage: update-nix-fetchgit filename"
-    System.Exit.exitFailure
+main = do
+  (Options {..}, fs) <- parseOpts
+  let goStd = T.putStr =<< processText =<< T.getContents
+  case fs of
+    [] -> goStd
+    _  -> for_ fs $ \f -> if f == "-" then goStd else processFile f
+
+----------------------------------------------------------------
+-- Options
+----------------------------------------------------------------
+
+newtype Options w = Options
+  { verbose :: w ::: Bool <!> "False"
+  }
+  deriving stock (Generic)
+
+parseOpts :: IO (Options Unwrapped, [FilePath])
+parseOpts = customExecParser (prefs $ multiSuffix "...")
+                             (info optParser (progDesc desc))
+ where
+  desc = unlines
+    [ "Update fetchers in Nix expressions."
+    , "Without any files stdin and stdout will be used"
+    ]
+
+optParser :: Parser (Options Unwrapped, [FilePath])
+optParser = (,) <$> (unwrap <$> parseRecord) <*> many
+  (strArgument (help "Nix files to update" <> metavar "FILE"))
+
+instance ParseRecord (Options Wrapped)
+deriving instance Show (Options Unwrapped)

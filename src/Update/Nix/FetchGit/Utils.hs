@@ -14,16 +14,22 @@ module Update.Nix.FetchGit.Utils
   , exprSpan
   , parseISO8601DateToDay
   , formatWarning
+  , fromEither
+  , note
+  , refute1
   ) where
 
+import           Control.Monad.IO.Class         ( MonadIO(liftIO) )
+import           Control.Monad.Validate
 import           Data.List.NonEmpty            as NE
+import           Data.Monoid
 import           Data.Text                      ( Text
                                                 , splitOn
                                                 , unpack
                                                 )
-import           Data.Time                      ( defaultTimeLocale
+import           Data.Time                      ( Day
+                                                , defaultTimeLocale
                                                 , parseTimeM
-                                                , Day
                                                 )
 import           Nix.Expr                hiding ( SourcePos )
 import           Nix.Parser                     ( Result(..)
@@ -39,10 +45,10 @@ ourParseNixText t = case parseNixTextLoc t of
   Failure parseError -> Left (CouldNotParseInput parseError)
   Success expr       -> pure expr
 
-ourParseNixFile :: FilePath -> IO (Either Warning NExprLoc)
-ourParseNixFile f = parseNixFileLoc f >>= \case
-  Failure parseError -> pure $ Left (CouldNotParseInput parseError)
-  Success expr       -> pure (Right expr)
+ourParseNixFile :: FilePath -> M NExprLoc
+ourParseNixFile f = liftIO (parseNixFileLoc f) >>= \case
+  Failure parseError -> refute1 (CouldNotParseInput parseError)
+  Success expr       -> pure expr
 
 -- | Get the url from either a nix expression for the url or a repo and owner
 -- expression.
@@ -82,10 +88,10 @@ extractFuncName _ = Nothing
 -- Takes an ISO 8601 date and returns just the day portion.
 parseISO8601DateToDay :: Text -> Either Warning Day
 parseISO8601DateToDay t =
-  let justDate = (unpack . Prelude.head . splitOn "T") t in
-  case parseTimeM False defaultTimeLocale "%Y-%m-%d" justDate of
-    Nothing -> Left $ InvalidDateString t
-    Just day -> pure day
+  let justDate = (unpack . Prelude.head . splitOn "T") t
+  in  maybe (Left $ InvalidDateString t)
+            Right
+            (parseTimeM False defaultTimeLocale "%Y-%m-%d" justDate)
 
 formatWarning :: Warning -> String
 formatWarning (CouldNotParseInput doc) = show doc
@@ -116,3 +122,20 @@ formatWarning (NoSuchRef text) =
   "Error: No such ref: " <> show text
 formatWarning (InvalidGitLsRemoteOutput output) =
   "Error: Output from git ls-remote is invalid:\n" <> show output
+
+----------------------------------------------------------------
+-- Errors
+----------------------------------------------------------------
+
+fromEither :: Either Warning a -> M a
+fromEither = \case
+  Left  e -> refute1 e
+  Right a -> pure a
+
+note :: Warning -> Maybe a -> M a
+note e = \case
+  Nothing -> refute1 e
+  Just a -> pure a
+
+refute1 :: Warning -> ValidateT (Dual [Warning]) IO a
+refute1 = refute . Dual . pure
