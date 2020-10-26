@@ -7,6 +7,9 @@ module Update.Nix.FetchGit.Prefetch
   , nixPrefetchGit
   , nixPrefetchUrl
   , getGitFullName
+  , getGitRevision
+  , getGitHubRevisionDate
+  , Revision(..)
   ) where
 
 import           Control.Monad.Except
@@ -19,9 +22,12 @@ import           Data.Text                      ( Text
                                                 , unpack
                                                 )
 import qualified Data.Text                     as T
+import           Data.Time                      ( Day )
 import           GHC.Generics
+import           GitHub.REST
 import           System.Exit                    ( ExitCode(..) )
 import           System.Process                 ( readProcessWithExitCode )
+import           Update.Nix.FetchGit.Utils      ( parseISO8601DateToDay )
 import           Update.Nix.FetchGit.Warning
 
 
@@ -64,6 +70,8 @@ nixPrefetchUrl extraArgs prefetchURL = runExceptT $ do
   note (InvalidPrefetchUrlOutput (pack nsStdout))
        (parseSHA256 (T.strip . T.pack $ nsStdout))
 
+newtype Revision = Revision { unRevision :: Text }
+
 -- | Discover if this ref is a branch or a tag
 --
 -- >>> runExceptT $ getGitFullName "https://github.com/expipiplus1/update-nix-fetchgit" "0.1.0.0"
@@ -73,22 +81,64 @@ nixPrefetchUrl extraArgs prefetchURL = runExceptT $ do
 -- Right "refs/heads/joe-fetchTarball"
 getGitFullName
   :: Text -- ^ git repo location
-  -> Text -- ^ branch or tag name
+  -> Revision -- ^ branch or tag name
   -> ExceptT Warning IO Text
   -- ^ Full name, i.e. with refs/heads/ or refs/tags/
-getGitFullName repo ref = do
+getGitFullName repo revision = do
+  (stdoutText, rs) <- gitLsRemotes repo revision
+  case rs of
+    [_hash, name] : _ -> pure name
+    _                 -> throwError $ InvalidGitLsRemoteOutput stdoutText
+
+-- | Return a tag or a hash
+getGitRevision
+  :: Text -- ^ git repo location
+  -> Revision -- ^ branch or tag name
+  -> ExceptT Warning IO Text
+  -- ^ Full name, i.e. with refs/heads/ or refs/tags/
+getGitRevision repo revision = do
+  (stdoutText, rs) <- gitLsRemotes repo revision
+  case rs of
+    [hash, name] : _ | Just tag <- stripPrefix "refs/tags/" name -> pure tag
+                     | otherwise -> pure hash
+    _ -> throwError $ InvalidGitLsRemoteOutput stdoutText
+
+gitLsRemotes :: Text -> Revision -> ExceptT Warning IO (Text, [[Text]])
+gitLsRemotes repo revision = do
   (exitCode, nsStdout, nsStderr) <- liftIO $ readProcessWithExitCode
     "git"
-    ["ls-remote", T.unpack repo, T.unpack ref]
+    ["ls-remote", T.unpack repo, T.unpack (unRevision revision)]
     ""
   case exitCode of
     ExitFailure e -> throwError (NixPrefetchGitFailed e (pack nsStderr))
     ExitSuccess   -> pure ()
   let stdoutText = T.pack nsStdout
   case fmap T.words . T.lines $ stdoutText of
-    []                -> throwError (NoSuchRef ref)
-    [_hash, name] : _ -> pure name
-    _                 -> throwError $ InvalidGitLsRemoteOutput stdoutText
+    [] -> throwError (NoSuchRef (unRevision revision))
+    rs -> pure (stdoutText, rs)
+
+-- >>> runExceptT $ getGitHubRevisionDate "expipiplus1" "update-nix-fetchgit" (Revision "0.1.0.0")
+getGitHubRevisionDate
+  :: Text -> Text -> Revision -> ExceptT Warning IO Day
+getGitHubRevisionDate owner repo revision = do
+  dateString <- runGitHubT ghState $ do
+    ref <- queryGitHub GHEndpoint
+      { method       = GET
+      , endpoint     = "/repos/:owner/:repo/commits/:ref"
+      , endpointVals = [ "owner" := owner
+                       , "repo" := repo
+                       , "ref" := unRevision revision
+                       ]
+      , ghData       = []
+      }
+    pure $ ref .: "commit" .: "committer" .: "date"
+  ExceptT . pure $ parseISO8601DateToDay dateString
+
+ghState :: GitHubState
+ghState = GitHubState { token      = Nothing
+                      , userAgent  = "expipiplus1/update-nix-fetchgit"
+                      , apiVersion = "v3"
+                      }
 
 ----------------------------------------------------------------
 -- Utils
@@ -106,3 +156,8 @@ parseSHA256 t = do
 
 note :: Monad m => e -> Maybe a -> ExceptT e m a
 note e = maybe (throwError e) pure
+
+stripPrefix :: Text -> Text -> Maybe Text
+stripPrefix p t = if p `T.isPrefixOf` t
+                    then Just $ T.drop (T.length p) t
+                    else Nothing
