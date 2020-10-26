@@ -19,6 +19,7 @@ import           Data.Text                      ( Text
                                                 )
 import           Nix.Expr
 import           Nix.Match.Typed
+import           Nix.Comments
 import           Update.Nix.FetchGit.Prefetch
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Utils
@@ -29,6 +30,11 @@ import qualified Data.Text.IO
 import qualified System.Exit
 import qualified System.IO
 import Data.Fix
+import Data.Vector (Vector)
+import qualified Data.Text.IO as T
+import qualified Data.Vector as V
+import qualified Data.Text as T
+import Control.Monad.IO.Class (MonadIO(liftIO))
 
 
 --------------------------------------------------------------------------------
@@ -62,8 +68,10 @@ processFile filename args = do
 -- all the parts of the file we want to update.
 updatesFromFile :: FilePath -> [Text] -> IO (Either Warning [SpanUpdate])
 updatesFromFile f extraArgs = runExceptT $ do
+  t <- liftIO $ T.readFile f
+  let nixLines = V.fromList (T.lines t)
   expr           <- ExceptT $ ourParseNixFile f
-  treeWithArgs   <- hoistEither $ exprToFetchTree expr
+  treeWithArgs   <- hoistEither $ exprToFetchTree nixLines expr
   treeWithLatest <-
     ExceptT
     $   sequenceA
@@ -74,8 +82,8 @@ updatesFromFile f extraArgs = runExceptT $ do
 -- Extracting information about fetches from the AST
 --------------------------------------------------------------------------------
 
-exprToFetchTree :: NExprLoc -> Either Warning (FetchTree FetchArgs)
-exprToFetchTree = \case
+exprToFetchTree :: Vector Text -> NExprLoc -> Either Warning (FetchTree FetchArgs)
+exprToFetchTree nixLines = \case
   [matchNixLoc|
     ^fetcher {
       url = ^url;
@@ -84,7 +92,8 @@ exprToFetchTree = \case
     }|] | extractFuncName fetcher `elem` [Just "fetchgit", Just "fetchgitPrivate"]
     -> do
       url' <- URL <$> exprText url
-      pure $ FetchNode (FetchGitArgs url' rev (Just sha256))
+      let desiredRev = getComment nixLines rev
+      pure $ FetchNode (FetchGitArgs url' rev (Just sha256) desiredRev)
   [matchNixLoc|
     ^fetcher {
       url = ^url;
@@ -92,22 +101,23 @@ exprToFetchTree = \case
     }|] | Just "fetchGit" <- extractFuncName fetcher
     -> do
       url' <- URL <$> exprText url
-      pure $ FetchNode (FetchGitArgs url' rev Nothing)
+      let desiredRev = getComment nixLines rev
+      pure $ FetchNode (FetchGitArgs url' rev Nothing desiredRev)
   [matchNixLoc|
     ^fetcher {
       owner = ^owner;
       repo = ^repo;
       rev = ^rev;
       sha256 = ^sha256;
-    }|] | Just funName <- extractFuncName fetcher
-        , Just fun <- case funName of
+    }|] | Just fun <- extractFuncName fetcher >>= \case
                         "fetchFromGitHub" -> Just GitHub
                         "fetchFromGitLab" -> Just GitLab
                         _ -> Nothing
     -> do
       owner' <- exprText owner
       repo' <- exprText repo
-      pure $ FetchNode (FetchGitArgs (fun owner' repo') rev (Just sha256))
+      let desiredRev = getComment nixLines rev
+      pure $ FetchNode (FetchGitArgs (fun owner' repo') rev (Just sha256) desiredRev)
   [matchNixLoc|
     ^fetcher {
       url = ^url;
@@ -118,8 +128,12 @@ exprToFetchTree = \case
       pure $ FetchNode (FetchTarballArgs url' sha256)
   e@[matchNixLoc|{
       _version = ^version;
-    }|] -> Node version <$> traverse exprToFetchTree (toList (unFix e))
-  e -> Node Nothing <$> traverse exprToFetchTree (toList (unFix e))
+    }|] -> Node version <$> traverse (exprToFetchTree nixLines) (toList (unFix e))
+  e -> Node Nothing <$> traverse (exprToFetchTree nixLines) (toList (unFix e))
+
+getComment :: Vector Text -> NExprLoc -> Maybe Comment
+getComment sourceLines =
+  annotation . getCompose . unFix . annotateWithComments sourceLines
 
 --------------------------------------------------------------------------------
 -- Getting updated information from the internet.
@@ -130,7 +144,12 @@ getFetchLatestInfo
 getFetchLatestInfo extraArgs args = runExceptT $ do
   case args of
     FetchGitArgs {..} -> do
-      o <- ExceptT $ nixPrefetchGit extraArgs (extractUrlString repoLocation)
+      let url = extractUrlString repoLocation
+      revArgs <- maybe (pure [])
+                       (fmap (("--rev" :) . pure) . getGitFullName url)
+                       ref
+      let args' = revArgs <> extraArgs
+      o <- ExceptT $ nixPrefetchGit args' url
       d <- hoistEither (parseISO8601DateToDay (date o))
       pure $ FetchGitLatestInfo args (rev o) (sha256 o) d
     FetchTarballArgs {..} -> do

@@ -16,3 +16,7 @@ data Warning = CouldNotParseInput (Doc Void)
              | NixPrefetchUrlFailed Int Text
              | InvalidPrefetchUrlOutput Text
              | InvalidDateString Text
+             | GitLsRemoteFailed Int Text
+             | NoSuchRef Text
+             | InvalidGitLsRemoteOutput Text
+  deriving Show

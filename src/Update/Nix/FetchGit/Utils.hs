@@ -5,6 +5,7 @@
 
 module Update.Nix.FetchGit.Utils
   ( RepoLocation(..)
+  , ourParseNixText
   , ourParseNixFile
   , extractUrlString
   , quoteString
@@ -16,21 +17,28 @@ module Update.Nix.FetchGit.Utils
   ) where
 
 import           Data.List.NonEmpty            as NE
-import           Data.Text                                ( Text
-                                                          , unpack
-                                                          , splitOn
-                                                          )
-import           Data.Time                                ( parseTimeM
-                                                          , defaultTimeLocale
-                                                          )
-import           Nix.Parser                               ( parseNixFileLoc
-                                                          , Result(..)
-                                                          )
+import           Data.Text                      ( Text
+                                                , splitOn
+                                                , unpack
+                                                )
+import           Data.Time                      ( defaultTimeLocale
+                                                , parseTimeM
+                                                )
+import           Nix.Expr                hiding ( SourcePos )
+import           Nix.Parser                     ( Result(..)
+                                                , parseNixFileLoc
+                                                , parseNixTextLoc
+                                                )
 import           Nix.Reduce
-import           Nix.Expr                          hiding ( SourcePos )
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
+
+ourParseNixText :: Text -> IO (Either Warning NExprLoc)
+ourParseNixText t =
+  case parseNixTextLoc t of
+    Failure parseError -> pure $ Left (CouldNotParseInput parseError)
+    Success expr -> pure <$> reduceExpr Nothing expr
 
 ourParseNixFile :: FilePath -> IO (Either Warning NExprLoc)
 ourParseNixFile f =
@@ -103,3 +111,10 @@ formatWarning (InvalidPrefetchUrlOutput output) =
   "Error: Output from nix-prefetch-url is invalid:\n" <> show output
 formatWarning (InvalidDateString text) =
   "Error: Date string is invalid: " <> show text
+formatWarning (GitLsRemoteFailed exitCode errorOutput) =
+  "Error: git ls-remote failed with exit code " <> show exitCode
+  <> " and error output:\n" <> unpack errorOutput
+formatWarning (NoSuchRef text) =
+  "Error: No such ref: " <> show text
+formatWarning (InvalidGitLsRemoteOutput output) =
+  "Error: Output from git ls-remote is invalid:\n" <> show output

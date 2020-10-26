@@ -1,10 +1,12 @@
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric  #-}
 
 module Update.Nix.FetchGit.Prefetch
   ( NixPrefetchGitOutput(..)
   , nixPrefetchGit
   , nixPrefetchUrl
+  , getGitFullName
   ) where
 
 import           Control.Error
@@ -64,12 +66,42 @@ nixPrefetchUrl extraArgs prefetchURL = runExceptT $ do
   parseSHA256 (T.strip . T.pack $ nsStdout)
     ?? InvalidPrefetchUrlOutput (pack nsStdout)
 
+-- | Discover if this ref is a branch or a tag
+--
+-- >>> runExceptT $ getGitFullName "https://github.com/expipiplus1/update-nix-fetchgit" "0.1.0.0"
+-- Right "refs/tags/0.1.0.0"
+--
+-- >>> runExceptT $ getGitFullName "https://github.com/expipiplus1/update-nix-fetchgit" "joe-fetchTarball"
+-- Right "refs/heads/joe-fetchTarball"
+getGitFullName
+  :: Text -- ^ git repo location
+  -> Text -- ^ branch or tag name
+  -> ExceptT Warning IO Text
+  -- ^ Full name, i.e. with refs/heads/ or refs/tags/
+getGitFullName repo ref = do
+  (exitCode, nsStdout, nsStderr) <- liftIO $ readProcessWithExitCode
+    "git"
+    ["ls-remote", T.unpack repo, T.unpack ref]
+    ""
+  hoistEither $ case exitCode of
+    ExitFailure e -> Left (NixPrefetchGitFailed e (pack nsStderr))
+    ExitSuccess   -> pure ()
+  let stdoutText = T.pack nsStdout
+  case fmap T.words . T.lines $ stdoutText of
+    []                -> throwE (NoSuchRef ref)
+    [_hash, name] : _ -> pure name
+    _                 -> throwE $ InvalidGitLsRemoteOutput stdoutText
+
+----------------------------------------------------------------
+-- Utils
+----------------------------------------------------------------
+
 parseSHA256 :: Text -> Maybe Text
 parseSHA256 t = do
   guard (base32Length == T.length t)
   guard (T.all (`elem` base32Chars) t)
   pure t
  where
-  base32Chars    = "0123456789abcdfghijklmnpqrsvwxyz"
+  base32Chars    = "0123456789abcdfghijklmnpqrsvwxyz" :: String
   sha256HashSize = 32
   base32Length   = (sha256HashSize * 8 - 1) `quot` 5 + 1

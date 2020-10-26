@@ -31,6 +31,7 @@ data FetchArgs
     { repoLocation :: RepoLocation
     , revExpr      :: NExprLoc
     , sha256Expr   :: Maybe NExprLoc
+    , ref          :: Maybe Text
     }
   | FetchTarballArgs
     { tarballLocation :: Text
