@@ -73,10 +73,10 @@ newtype Revision = Revision { unRevision :: Text }
 
 -- | Discover if this ref is a branch or a tag
 --
--- >>> runM $ getGitFullName "https://github.com/expipiplus1/update-nix-fetchgit" (Revision "0.1.0.0")
+-- >>> runM _ $ getGitFullName "https://github.com/expipiplus1/update-nix-fetchgit" (Revision "0.1.0.0")
 -- Right "refs/tags/0.1.0.0"
 --
--- >>> runM $ getGitFullName "https://github.com/expipiplus1/update-nix-fetchgit" (Revision "joe-fetchTarball")
+-- >>> runM _ $ getGitFullName "https://github.com/expipiplus1/update-nix-fetchgit" (Revision "joe-fetchTarball")
 -- Right "refs/heads/joe-fetchTarball"
 getGitFullName
   :: Text

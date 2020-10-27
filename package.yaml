@@ -23,10 +23,11 @@ executables:
     ghc-options: -threaded -rtsopts -with-rtsopts=-N
     dependencies:
     - base
+    - optparse-applicative
+    - optparse-generic >= 1.4.2
+    - say
     - text >= 1.2
     - update-nix-fetchgit
-    - optparse-generic >= 1.4.2
-    - optparse-applicative
 
 library:
   source-dirs: src
@@ -42,7 +43,6 @@ library:
   - mtl
   - prettyprinter
   - process >= 1.2
-  - say
   - syb
   - template-haskell
   - text >= 1.2

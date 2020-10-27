@@ -136,6 +136,7 @@ gitUpdater
   -> Updater
 gitUpdater repoLocation revision revExpr sha256Expr = Updater $ do
   let repoUrl = extractUrlString repoLocation
+  logVerbose $ "Updating " <> prettyRepoLocation repoLocation
   revArgs <- maybe (pure [])
                    (fmap (("--rev" :) . pure) . getGitFullName repoUrl)
                    revision

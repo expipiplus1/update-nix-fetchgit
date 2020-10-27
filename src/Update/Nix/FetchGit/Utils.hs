@@ -4,6 +4,7 @@ module Update.Nix.FetchGit.Utils
   , ourParseNixText
   , ourParseNixFile
   , extractUrlString
+  , prettyRepoLocation
   , quoteString
   , extractFuncName
   , exprText
@@ -13,9 +14,11 @@ module Update.Nix.FetchGit.Utils
   , fromEither
   , note
   , refute1
+  , logVerbose
   ) where
 
 import           Control.Monad.IO.Class         ( MonadIO(liftIO) )
+import           Control.Monad.Reader           ( MonadReader(ask) )
 import           Control.Monad.Validate
 import           Data.List.NonEmpty            as NE
 import           Data.Monoid
@@ -53,6 +56,12 @@ extractUrlString = \case
   URL u -> u
   GitHub o r -> "https://github.com/" <> o <> "/" <> r <> ".git"
   GitLab o r -> "https://gitlab.com/" <> o <> "/" <> r <> ".git"
+
+prettyRepoLocation :: RepoLocation -> Text
+prettyRepoLocation = \case
+  URL u      -> u
+  GitHub o r -> o <> "/" <> r
+  GitLab o r -> o <> "/" <> r
 
 -- Add double quotes around a string so it can be inserted into a Nix
 -- file as a string literal.
@@ -133,5 +142,14 @@ note e = \case
   Nothing -> refute1 e
   Just a -> pure a
 
-refute1 :: Warning -> ValidateT (Dual [Warning]) IO a
+refute1 :: Warning -> M a
 refute1 = refute . Dual . pure
+
+----------------------------------------------------------------
+-- Logging
+----------------------------------------------------------------
+
+logVerbose :: Text -> M ()
+logVerbose t = do
+  Env{..} <- ask
+  sayLog Verbose t
