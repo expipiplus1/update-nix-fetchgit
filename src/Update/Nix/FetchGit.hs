@@ -27,7 +27,7 @@ import           Update.Nix.Updater
 import           Update.Span
 import           Control.Monad.Validate         ( MonadValidate(tolerate) )
 import           Data.Functor
-
+import           Control.Monad.Reader           ( MonadReader(ask) )
 
 --------------------------------------------------------------------------------
 -- Tying it all together
@@ -69,16 +69,21 @@ updatesFromText t = do
 ----------------------------------------------------------------
 
 findUpdates :: (NExprLoc -> Maybe Comment) -> NExprLoc -> M FetchTree
-findUpdates getComment e =
-  let updaters = ($ e) <$> fetchers getComment
-  in
-    case asum updaters of
-      Just u  -> UpdaterNode <$> u
-      Nothing -> case e of
-        [matchNixLoc|{ _version = ^version; }|] ->
-          Node version <$> traverse (findUpdates getComment) (toList (unFix e))
-        _ ->
-          Node Nothing <$> traverse (findUpdates getComment) (toList (unFix e))
+findUpdates getComment e = do
+  Env {..} <- ask
+  if not (null updateLocations || any (containsPosition e) updateLocations)
+    then pure $ Node Nothing []
+    else
+      let updaters = ($ e) <$> fetchers getComment
+      in
+        case asum updaters of
+          Just u  -> UpdaterNode <$> u
+          Nothing -> case e of
+            [matchNixLoc|{ _version = ^version; }|] ->
+              Node version
+                <$> traverse (findUpdates getComment) (toList (unFix e))
+            _ -> Node Nothing
+              <$> traverse (findUpdates getComment) (toList (unFix e))
 
 evalUpdates :: FetchTree -> M [SpanUpdate]
 evalUpdates = fmap snd . go

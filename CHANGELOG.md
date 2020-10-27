@@ -8,6 +8,7 @@
 - Allow pinning revisions in tarball fetches
 - Gate stderr output under `--verbose`
 - Add support for `fetchSubmodules`, `leaveDotGit` and `deepClone`
+- Add support for filtering update locations with `--location line:col`
 
 ### Under the Hood
 

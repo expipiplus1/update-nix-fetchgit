@@ -5,9 +5,15 @@ import           Data.Foldable
 import qualified Data.Text.IO                  as T
 import           Data.Version                   ( showVersion )
 import           Options.Applicative
-import           Options.Generic         hiding ( metavar )
+import           Options.Generic
 import           Paths_update_nix_fetchgit      ( version )
 import           Say
+import           Text.ParserCombinators.ReadP   ( char
+                                                , eof
+                                                , readP_to_S
+                                                , readS_to_P
+                                                , sepBy
+                                                )
 import           Update.Nix.FetchGit
 import           Update.Nix.FetchGit.Types
 
@@ -25,25 +31,28 @@ main = do
 ----------------------------------------------------------------
 
 env :: Options Unwrapped -> Env
-env Options {..} = Env $ if verbose
-  then const sayErr
-  else if quiet
-    then \case
-      Verbose -> const (pure ())
-      Normal  -> const (pure ())
-      Quiet   -> sayErr
-    else \case
-      Verbose -> const (pure ())
-      Normal  -> sayErr
-      Quiet   -> sayErr
+env Options {..} =
+  let sayLog
+        | verbose = const sayErr
+        | quiet = \case
+          Verbose -> const (pure ())
+          Normal  -> const (pure ())
+          Quiet   -> sayErr
+        | otherwise = \case
+          Verbose -> const (pure ())
+          Normal  -> sayErr
+          Quiet   -> sayErr
+      updateLocations = [ (l, c) | Position l c <- location ]
+  in  Env { .. }
 
 ----------------------------------------------------------------
 -- Options
 ----------------------------------------------------------------
 
 data Options w = Options
-  { verbose :: w ::: Bool <!> "False"
-  , quiet   :: w ::: Bool <!> "False"
+  { verbose  :: w ::: Bool <!> "False"
+  , quiet    :: w ::: Bool <!> "False"
+  , location :: w ::: [Position] <?> "Source location to limit updates to"
   }
   deriving stock Generic
 
@@ -59,8 +68,17 @@ parseOpts = customExecParser (prefs $ multiSuffix "...")
 optParser :: Parser (Options Unwrapped, [FilePath])
 optParser =
   versionOption
-    <*> ((,) <$> (unwrap <$> parseRecord) <*> many
-          (strArgument (help "Nix files to update" <> metavar "FILE"))
+    <*> (   (,)
+        <$> (unwrap <$> parseRecordWithModifiers defaultModifiers
+              { shortNameModifier = firstLetter
+              }
+            )
+        <*> many
+              (strArgument
+                (  help "Nix files to update"
+                <> Options.Applicative.metavar "FILE"
+                )
+              )
         )
  where
   versionString = "update-nix-fetchgit-" <> showVersion version
@@ -71,3 +89,15 @@ optParser =
 
 instance ParseRecord (Options Wrapped)
 deriving instance Show (Options Unwrapped)
+
+data Position = Position Int Int
+  deriving Show
+
+instance Read Position where
+  readsPrec _ = readP_to_S $ do
+    [line, col] <- sepBy (readS_to_P reads) (char ':')
+    eof
+    pure $ Position line col
+
+instance ParseField Position where
+  metavar _ = "LINE:COL"

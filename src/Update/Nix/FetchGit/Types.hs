@@ -27,8 +27,9 @@ asWarnings m = unValidateT MNothing m <&> \case
   Right (MJust e , a) -> (e, Just a)
   Right (MNothing, a) -> (mempty, Just a)
 
-newtype Env = Env
+data Env = Env
   { sayLog :: Verbosity -> Text -> IO ()
+  , updateLocations :: [(Int, Int)]
   }
 
 data Verbosity

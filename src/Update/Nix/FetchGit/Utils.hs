@@ -10,6 +10,7 @@ module Update.Nix.FetchGit.Utils
   , exprText
   , exprBool
   , exprSpan
+  , containsPosition
   , parseISO8601DateToDay
   , formatWarning
   , fromEither
@@ -42,6 +43,7 @@ import           Update.Nix.FetchGit.Warning
 import           Update.Span
 import qualified Data.Text as T
 import Nix.Atoms (NAtom(NBool))
+import Data.Fix
 
 ourParseNixText :: Text -> Either Warning NExprLoc
 ourParseNixText t = case parseNixTextLoc t of
@@ -148,6 +150,15 @@ formatWarning (InvalidGitLsRemoteOutput output) =
 
 tShow :: Show a => a -> Text
 tShow = T.pack . show
+
+----------------------------------------------------------------
+-- Locations
+----------------------------------------------------------------
+
+containsPosition :: NExprLoc -> (Int, Int) -> Bool
+containsPosition (Fix (Compose (Ann (SrcSpan begin end) _))) p =
+  let unSourcePos (SourcePos _ l c) = (unPos l, unPos c)
+  in  p >= unSourcePos begin && p < unSourcePos end
 
 ----------------------------------------------------------------
 -- Errors
