@@ -21,12 +21,12 @@ import           Nix.Comments
 import           Nix.Expr
 import           Nix.Match.Typed
 import           System.Exit
-import           System.IO
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Utils
-import           Update.Nix.FetchGit.Warning
 import           Update.Nix.Updater
 import           Update.Span
+import           Control.Monad.Validate         ( MonadValidate(tolerate) )
+import           Data.Functor
 
 
 --------------------------------------------------------------------------------
@@ -42,17 +42,10 @@ processFile env filename = do
   when (t /= t') $ Data.Text.IO.writeFile filename t'
 
 processText :: Env -> Text -> IO Text
-processText env t = runM env (updatesFromText t) >>= \case
-  -- If we have any errors, print them and finish.
-  Left  ws -> printErrorAndExit ws
-  -- Update the text of the file in memory.
-  Right us -> do
-    pure $ updateSpans us t
- where
-  printErrorAndExit :: [Warning] -> IO a
-  printErrorAndExit e = do
-    traverse_ (hPutStrLn stderr . formatWarning) e
-    exitFailure
+processText env t = do
+  (es, t') <- runM env (updatesFromText t <&> (`updateSpans` t))
+  traverse_ (sayLog env Normal . formatWarning) es
+  maybe exitFailure pure t'
 
 -- | Given the path to a Nix file, returns the SpanUpdates
 -- all the parts of the file we want to update.
@@ -66,7 +59,7 @@ updatesFromText t = do
     findUpdates (getComment nixLines) expr
   us <- evalUpdates tree
   case us of
-    []  -> logVerbose "Made No updates"
+    []  -> logVerbose "Made no updates"
     [_] -> logVerbose "Made 1 update"
     _   -> logVerbose ("Made " <> T.pack (show (length us)) <> " updates")
   pure us
@@ -94,7 +87,7 @@ evalUpdates = fmap snd . go
   go = \case
     UpdaterNode (Updater u) -> u
     Node versionExpr cs     -> do
-      (ds, ss) <- unzip <$> traverse go cs
+      (ds, ss) <- unzip . catMaybes <$> traverse (tolerate . go) cs
       -- Update version string with the maximum of versions in the children
       let latestDate = maximumMay (catMaybes ds)
       pure

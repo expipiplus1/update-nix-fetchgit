@@ -59,7 +59,7 @@ Here are some examples of nix expressions which can be updated:
         rev = "4f56fd184ef6020626492a6f954a486d54f8b7ba";
         # ^ rev will be updated to the revision of HEAD
         sha256 = "0nmyp5yrzl9dbq85wyiimsj9fklb8637a1936nw7zzvlnzkgh28n";
-        # ^ sha256 will be update to the correct hash
+        # ^ sha256 will be updated to the correct hash
       };
     }
     ```

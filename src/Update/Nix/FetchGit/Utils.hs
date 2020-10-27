@@ -15,6 +15,7 @@ module Update.Nix.FetchGit.Utils
   , note
   , refute1
   , logVerbose
+  , logNormal
   ) where
 
 import           Control.Monad.IO.Class         ( MonadIO(liftIO) )
@@ -38,6 +39,7 @@ import           Nix.Parser                     ( Result(..)
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
+import qualified Data.Text as T
 
 ourParseNixText :: Text -> Either Warning NExprLoc
 ourParseNixText t = case parseNixTextLoc t of
@@ -98,35 +100,43 @@ parseISO8601DateToDay t =
             Right
             (parseTimeM False defaultTimeLocale "%Y-%m-%d" justDate)
 
-formatWarning :: Warning -> String
-formatWarning (CouldNotParseInput doc) = show doc
+formatWarning :: Warning -> Text
+formatWarning (CouldNotParseInput doc) = tShow doc
 formatWarning (MissingAttr attrName) =
-  "Error: The \"" <> unpack attrName <> "\" attribute is missing."
+  "Error: The \"" <> attrName <> "\" attribute is missing."
 formatWarning (DuplicateAttrs attrName) =
-  "Error: The \"" <> unpack attrName <> "\" attribute appears twice in a set."
+  "Error: The \"" <> attrName <> "\" attribute appears twice in a set."
 formatWarning (NotAString expr) =
   "Error: The expression at "
-  <> (prettyPrintSourcePos . spanBegin . exprSpan) expr
-  <> " is not a string literal."
+    <> (T.pack . prettyPrintSourcePos . spanBegin . exprSpan) expr
+    <> " is not a string literal."
 formatWarning (NixPrefetchGitFailed exitCode errorOutput) =
-  "Error: nix-prefetch-git failed with exit code " <> show exitCode
-  <> " and error output:\n" <> unpack errorOutput
+  "Error: nix-prefetch-git failed with exit code "
+    <> tShow exitCode
+    <> " and error output:\n"
+    <> errorOutput
 formatWarning (InvalidPrefetchGitOutput output) =
-  "Error: Output from nix-prefetch-git is invalid:\n" <> show output
+  "Error: Output from nix-prefetch-git is invalid:\n" <> tShow output
 formatWarning (NixPrefetchUrlFailed exitCode errorOutput) =
-  "Error: nix-prefetch-url failed with exit code " <> show exitCode
-  <> " and error output:\n" <> unpack errorOutput
+  "Error: nix-prefetch-url failed with exit code "
+    <> tShow exitCode
+    <> " and error output:\n"
+    <> errorOutput
 formatWarning (InvalidPrefetchUrlOutput output) =
-  "Error: Output from nix-prefetch-url is invalid:\n" <> show output
+  "Error: Output from nix-prefetch-url is invalid:\n" <> tShow output
 formatWarning (InvalidDateString text) =
-  "Error: Date string is invalid: " <> show text
+  "Error: Date string is invalid: " <> tShow text
 formatWarning (GitLsRemoteFailed exitCode errorOutput) =
-  "Error: git ls-remote failed with exit code " <> show exitCode
-  <> " and error output:\n" <> unpack errorOutput
-formatWarning (NoSuchRef text) =
-  "Error: No such ref: " <> show text
+  "Error: git ls-remote failed with exit code "
+    <> tShow exitCode
+    <> " and error output:\n"
+    <> errorOutput
+formatWarning (NoSuchRef text) = "Error: No such ref: " <> tShow text
 formatWarning (InvalidGitLsRemoteOutput output) =
-  "Error: Output from git ls-remote is invalid:\n" <> show output
+  "Error: Output from git ls-remote is invalid:\n" <> tShow output
+
+tShow :: Show a => a -> Text
+tShow = T.pack . show
 
 ----------------------------------------------------------------
 -- Errors
@@ -152,4 +162,9 @@ refute1 = refute . Dual . pure
 logVerbose :: Text -> M ()
 logVerbose t = do
   Env{..} <- ask
-  sayLog Verbose t
+  liftIO $ sayLog Verbose t
+
+logNormal :: Text -> M ()
+logNormal t = do
+  Env {..} <- ask
+  liftIO $ sayLog Normal t

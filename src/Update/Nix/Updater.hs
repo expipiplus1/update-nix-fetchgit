@@ -46,7 +46,7 @@ fetchgitUpdater getComment = \case
     }|] | extractFuncName fetcher `elem` [Just "fetchgit", Just "fetchgitPrivate"]
     -> Just $ do
       url' <- fromEither $ URL <$> exprText url
-      let desiredRev = Revision <$> getComment rev
+      let desiredRev = commentToRequest (getComment rev)
       pure $ gitUpdater url' desiredRev rev (Just sha256)
   _ -> Nothing
 
@@ -59,7 +59,7 @@ builtinsFetchGitUpdater getComment = \case
     }|] | Just "fetchGit" <- extractFuncName fetcher
     -> Just $ do
       url' <- fromEither $ URL <$> exprText url
-      let desiredRev = Revision <$> getComment rev
+      let desiredRev = commentToRequest (getComment rev)
       pure $ gitUpdater url' desiredRev rev Nothing
   _ -> Nothing
 
@@ -116,7 +116,7 @@ fetchGitHubUpdater getComment = \case
     -> Just $ do
       owner' <- fromEither $ exprText owner
       repo' <- fromEither $ exprText repo
-      let desiredRev = Revision <$> getComment rev
+      let desiredRev = commentToRequest (getComment rev)
       pure $ gitUpdater (fun owner' repo') desiredRev rev (Just sha256)
   _ -> Nothing
 
@@ -124,22 +124,36 @@ fetchGitHubUpdater getComment = \case
 -- Helpers
 ----------------------------------------------------------------
 
+data RevisionRequest
+  = Pin
+  | DoNotPin Revision
+
+commentToRequest :: Maybe Text -> Maybe RevisionRequest
+commentToRequest = \case
+  Nothing    -> Nothing
+  Just "pin" -> Just Pin
+  Just r     -> Just (DoNotPin (Revision r))
+
 gitUpdater
   :: RepoLocation
   -- ^ Repo URL
-  -> Maybe Revision
+  -> Maybe RevisionRequest
   -- ^ Desired revision
   -> NExprLoc
   -- ^ rev
   -> Maybe NExprLoc
   -- ^ sha256, not present for some fetchers
   -> Updater
-gitUpdater repoLocation revision revExpr sha256Expr = Updater $ do
+gitUpdater repoLocation revisionRequest revExpr sha256Expr = Updater $ do
   let repoUrl = extractUrlString repoLocation
   logVerbose $ "Updating " <> prettyRepoLocation repoLocation
-  revArgs <- maybe (pure [])
-                   (fmap (("--rev" :) . pure) . getGitFullName repoUrl)
-                   revision
+  revArgs <- case revisionRequest of
+    Nothing  -> pure []
+    Just req -> do
+      rev <- case req of
+        Pin        -> fromEither (exprText revExpr)
+        DoNotPin r -> getGitFullName repoUrl r
+      pure ["--rev", rev]
   o <- nixPrefetchGit revArgs repoUrl
   d <- fromEither $ parseISO8601DateToDay (P.date o)
   pure

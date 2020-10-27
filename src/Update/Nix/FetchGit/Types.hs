@@ -2,28 +2,38 @@
 
 module Update.Nix.FetchGit.Types where
 
+import           Control.Monad.Reader
 import           Control.Monad.Validate
+import           Control.Monad.Validate.Internal
 import           Data.Bifunctor                 ( Bifunctor(first) )
+import           Data.Functor
 import           Data.Monoid
 import           Data.Text                      ( Text )
 import           Data.Time                      ( Day )
 import           Nix.Expr                       ( NExprLoc )
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
-import           Control.Monad.Reader
 
 type M = ReaderT Env (ValidateT (Dual [Warning]) IO)
 
-runM :: Env -> M a -> IO (Either [Warning] a)
-runM env =
-  fmap (first (reverse . getDual)) . runValidateT . flip runReaderT env
+runM :: Env -> M a -> IO ([Warning], Maybe a)
+runM env = fmap (first (reverse . getDual)) . asWarnings . flip runReaderT env
+
+-- | Runs a 'ValidateT' computation returning the errors raised by 'refute' or
+-- 'dispute' if any, as well as returning the computation’s result if possible.
+asWarnings :: (Functor m, Monoid e) => ValidateT e m a -> m (e, Maybe a)
+asWarnings m = unValidateT MNothing m <&> \case
+  Left  e             -> (e, Nothing)
+  Right (MJust e , a) -> (e, Just a)
+  Right (MNothing, a) -> (mempty, Just a)
 
 newtype Env = Env
-  { sayLog :: Verbosity -> Text -> M ()
+  { sayLog :: Verbosity -> Text -> IO ()
   }
 
 data Verbosity
   = Verbose
+  | Normal
   | Quiet
 
 newtype Updater = Updater

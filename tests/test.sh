@@ -40,6 +40,8 @@ function prepare_local_test_assets() {
   git tag 1.0.0
   echo '1.0.0+stuff' > test.txt
   git commit -m "added stuff" test.txt
+  # Create a branch with this name
+  git branch nixos-unstable
   popd
 
   export GIT_AUTHOR_DATE='1468031426 -0700'

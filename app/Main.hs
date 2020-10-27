@@ -27,18 +27,25 @@ main = do
 env :: Options Unwrapped -> Env
 env Options {..} = Env $ if verbose
   then const sayErr
-  else \case
-    Verbose -> const (pure ())
-    Quiet   -> sayErr
+  else if quiet
+    then \case
+      Verbose -> const (pure ())
+      Normal  -> const (pure ())
+      Quiet   -> sayErr
+    else \case
+      Verbose -> const (pure ())
+      Normal  -> sayErr
+      Quiet   -> sayErr
 
 ----------------------------------------------------------------
 -- Options
 ----------------------------------------------------------------
 
-newtype Options w = Options
+data Options w = Options
   { verbose :: w ::: Bool <!> "False"
+  , quiet   :: w ::: Bool <!> "False"
   }
-  deriving stock (Generic)
+  deriving stock Generic
 
 parseOpts :: IO (Options Unwrapped, [FilePath])
 parseOpts = customExecParser (prefs $ multiSuffix "...")
