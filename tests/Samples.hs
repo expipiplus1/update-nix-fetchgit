@@ -8,6 +8,7 @@ import           System.FilePath ((</>))
 
 import qualified Data.Text
 import qualified Data.Text.IO
+import qualified System.Environment
 import qualified System.FilePath
 import qualified System.Directory
 import qualified System.IO.Temp
@@ -23,7 +24,9 @@ import qualified Update.Nix.FetchGit
 -- * perform update
 -- * adjust @url@ to point to the expected one
 -- * copy file back to @tests/test_rec_sets.out.nix@ so it be compared to @expected.nix@
-runTest f = System.IO.Temp.withSystemTempDirectory "test-update-nix-fetchgit" $ \dir -> do
+runTest f =
+  System.IO.Temp.withSystemTempDirectory "test-update-nix-fetchgit" $ \dir ->
+    System.IO.Temp.withSystemTempDirectory "test-update-nix-fetchgit-store" $ \storeDir -> do
   let
       inFile = Data.Text.unpack
         $ Data.Text.replace ".out.nix" ".in.nix"
@@ -39,6 +42,17 @@ runTest f = System.IO.Temp.withSystemTempDirectory "test-update-nix-fetchgit" $ 
         mempty
 
   replaceFile (dir </> inBase) "/tmp/nix-update-fetchgit-test" (Data.Text.pack dir)
+
+  System.Environment.setEnv "NIX_STATE_DIR" $ storeDir </> "state"
+  System.Environment.setEnv "NIX_STORE_DIR" $ storeDir
+
+  -- work around race condition https://github.com/NixOS/nix/issues/2706
+  System.Directory.createDirectoryIfMissing True $ storeDir </> "state/gcroots"
+
+  -- and another - error: SQLite database storeDir </> 'state/db/db.sqlite' is busy
+  _ <- System.Process.readCreateProcess
+        (System.Process.shell ("nix-store --init"))
+        mempty
 
   Update.Nix.FetchGit.processFile (dir </> inBase) []
 
