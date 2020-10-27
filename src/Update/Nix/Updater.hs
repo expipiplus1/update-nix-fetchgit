@@ -157,5 +157,6 @@ tarballUpdater
   -- ^ sha256
   -> Updater
 tarballUpdater url sha256Expr = Updater $ do
+  logVerbose $ "Updating " <> url
   sha256 <- nixPrefetchUrl [] url
   pure (Nothing, [SpanUpdate (exprSpan sha256Expr) (quoteString sha256)])
