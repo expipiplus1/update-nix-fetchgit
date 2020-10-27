@@ -43,11 +43,17 @@ fetchgitUpdater getComment = \case
       url = ^url;
       rev = ^rev; # rev
       sha256 = ^sha256;
+      _deepClone = ^deepClone;
+      _leaveDotGit = ^leaveDotGit;
+      _fetchSubmodules = ^fetchSubmodules;
     }|] | extractFuncName fetcher `elem` [Just "fetchgit", Just "fetchgitPrivate"]
     -> Just $ do
       url' <- fromEither $ URL <$> exprText url
       let desiredRev = commentToRequest (getComment rev)
-      pure $ gitUpdater url' desiredRev rev (Just sha256)
+      deepClone' <- fmap (fromMaybe False) . fromEither . traverse exprBool $ deepClone
+      leaveDotGit' <- fmap (fromMaybe deepClone') . fromEither . traverse exprBool $ leaveDotGit
+      fetchSubmodules' <- fmap (fromMaybe True) . fromEither . traverse exprBool $ fetchSubmodules
+      pure $ gitUpdater url' desiredRev deepClone' leaveDotGit' fetchSubmodules' rev (Just sha256)
   _ -> Nothing
 
 builtinsFetchGitUpdater :: Fetcher
@@ -56,11 +62,13 @@ builtinsFetchGitUpdater getComment = \case
     ^fetcher {
       url = ^url;
       rev = ^rev; # rev
+      _submodules = ^submodules;
     }|] | Just "fetchGit" <- extractFuncName fetcher
     -> Just $ do
       url' <- fromEither $ URL <$> exprText url
       let desiredRev = commentToRequest (getComment rev)
-      pure $ gitUpdater url' desiredRev rev Nothing
+      submodules' <- fmap (fromMaybe False) . fromEither . traverse exprBool $ submodules
+      pure $ gitUpdater url' desiredRev False False submodules' rev Nothing
   _ -> Nothing
 
 fetchTarballGithubUpdater :: Fetcher
@@ -109,6 +117,7 @@ fetchGitHubUpdater getComment = \case
       repo = ^repo;
       rev = ^rev;
       sha256 = ^sha256;
+      _fetchSubmodules = ^fetchSubmodules;
     }|] | Just fun <- extractFuncName fetcher >>= \case
                         "fetchFromGitHub" -> Just GitHub
                         "fetchFromGitLab" -> Just GitLab
@@ -117,7 +126,8 @@ fetchGitHubUpdater getComment = \case
       owner' <- fromEither $ exprText owner
       repo' <- fromEither $ exprText repo
       let desiredRev = commentToRequest (getComment rev)
-      pure $ gitUpdater (fun owner' repo') desiredRev rev (Just sha256)
+      fetchSubmodules' <- fmap (fromMaybe False) . fromEither . traverse exprBool $ fetchSubmodules
+      pure $ gitUpdater (fun owner' repo') desiredRev False False fetchSubmodules' rev (Just sha256)
   _ -> Nothing
 
 ----------------------------------------------------------------
@@ -139,30 +149,42 @@ gitUpdater
   -- ^ Repo URL
   -> Maybe RevisionRequest
   -- ^ Desired revision
+  -> Bool
+  -- ^ Deep Clone
+  -> Bool
+  -- ^ Leave .git
+  -> Bool
+  -- ^ Fetch submodules
   -> NExprLoc
   -- ^ rev
   -> Maybe NExprLoc
   -- ^ sha256, not present for some fetchers
   -> Updater
-gitUpdater repoLocation revisionRequest revExpr sha256Expr = Updater $ do
-  let repoUrl = extractUrlString repoLocation
-  logVerbose $ "Updating " <> prettyRepoLocation repoLocation
-  revArgs <- case revisionRequest of
-    Nothing  -> pure []
-    Just req -> do
-      rev <- case req of
-        Pin        -> fromEither (exprText revExpr)
-        DoNotPin r -> getGitFullName repoUrl r
-      pure ["--rev", rev]
-  o <- nixPrefetchGit revArgs repoUrl
-  d <- fromEither $ parseISO8601DateToDay (P.date o)
-  pure
-    ( Just d
-    , [ SpanUpdate (exprSpan e) (quoteString (P.sha256 o))
-      | Just e <- pure sha256Expr
-      ]
-      <> [SpanUpdate (exprSpan revExpr) (quoteString $ P.rev o)]
-    )
+gitUpdater repoLocation revisionRequest deepClone leaveDotGit fetchSubmodules revExpr sha256Expr
+  = Updater $ do
+    let repoUrl = extractUrlString repoLocation
+    logVerbose $ "Updating " <> prettyRepoLocation repoLocation
+    revArgs <- case revisionRequest of
+      Nothing  -> pure []
+      Just req -> do
+        rev <- case req of
+          Pin        -> fromEither (exprText revExpr)
+          DoNotPin r -> getGitFullName repoUrl r
+        pure ["--rev", rev]
+    let args =
+          revArgs
+            <> [ "--deepClone" | deepClone ]
+            <> [ "--leave-dotGit" | leaveDotGit ]
+            <> [ "--fetch-submodules" | fetchSubmodules ]
+    o <- nixPrefetchGit args repoUrl
+    d <- fromEither $ parseISO8601DateToDay (P.date o)
+    pure
+      ( Just d
+      , [ SpanUpdate (exprSpan e) (quoteString (P.sha256 o))
+        | Just e <- pure sha256Expr
+        ]
+        <> [SpanUpdate (exprSpan revExpr) (quoteString $ P.rev o)]
+      )
 
 tarballUpdater
   :: Text

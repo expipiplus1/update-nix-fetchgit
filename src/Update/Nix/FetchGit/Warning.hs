@@ -11,6 +11,7 @@ data Warning = CouldNotParseInput (Doc Void)
              | MissingAttr Text
              | DuplicateAttrs Text
              | NotAString NExprLoc
+             | NotABool NExprLoc
              | NixPrefetchGitFailed Int Text
              | InvalidPrefetchGitOutput Text
              | NixPrefetchUrlFailed Int Text

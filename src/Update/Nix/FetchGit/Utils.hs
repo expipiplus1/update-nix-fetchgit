@@ -8,6 +8,7 @@ module Update.Nix.FetchGit.Utils
   , quoteString
   , extractFuncName
   , exprText
+  , exprBool
   , exprSpan
   , parseISO8601DateToDay
   , formatWarning
@@ -40,6 +41,7 @@ import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
 import qualified Data.Text as T
+import Nix.Atoms (NAtom(NBool))
 
 ourParseNixText :: Text -> Either Warning NExprLoc
 ourParseNixText t = case parseNixTextLoc t of
@@ -79,6 +81,11 @@ exprText = \case
   (AnnE _ (NStr (DoubleQuoted [Plain t]))) -> pure t
   e -> Left (NotAString e)
 
+exprBool :: NExprLoc -> Either Warning Bool
+exprBool = \case
+  (AnnE _ (NConstant (NBool b))) -> pure b
+  e                              -> Left (NotABool e)
+
 -- | Get the 'SrcSpan' covering a particular expression.
 exprSpan :: NExprLoc -> SrcSpan
 exprSpan (AnnE s _) = s
@@ -110,6 +117,10 @@ formatWarning (NotAString expr) =
   "Error: The expression at "
     <> (T.pack . prettyPrintSourcePos . spanBegin . exprSpan) expr
     <> " is not a string literal."
+formatWarning (NotABool expr) =
+  "Error: The expression at "
+    <> (T.pack . prettyPrintSourcePos . spanBegin . exprSpan) expr
+    <> " is not a boolean literal."
 formatWarning (NixPrefetchGitFailed exitCode errorOutput) =
   "Error: nix-prefetch-git failed with exit code "
     <> tShow exitCode
