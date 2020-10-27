@@ -8,11 +8,11 @@
 
 module Main where
 
+import           Data.Foldable
+import qualified Data.Text.IO                  as T
 import           Options.Applicative
 import           Options.Generic         hiding ( metavar )
-import Update.Nix.FetchGit
-import qualified Data.Text.IO as T
-import Data.Foldable
+import           Update.Nix.FetchGit
 
 main :: IO ()
 main = do
