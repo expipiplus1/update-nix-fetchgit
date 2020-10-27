@@ -1,66 +1,83 @@
-name:                update-nix-fetchgit
-version:             0.1.2.0
-synopsis:            A program to update fetchgit values in Nix expressions
-description:         This command-line utility is meant to be used by people maintaining Nix expressions that fetch files from Git repositories.
-                     It automates the process of keeping such expressions up-to-date with the latest upstream sources.
-homepage:            https://github.com/expipiplus1/update-nix-fetchgit#readme
-license:             BSD3
-license-file:        LICENSE
-author:              Joe Hermaszewski
-maintainer:          haskell@monoid.al
-copyright:           2015 Joe Hermaszewski
-category:            Nix
-build-type:          Simple
-cabal-version:       >=1.10
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.34.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           update-nix-fetchgit
+version:        0.1.2.0
+synopsis:       A program to update fetchgit values in Nix expressions
+description:    This command-line utility is meant to be used by people maintaining Nix
+                expressions that fetch files from Git repositories. It automates the process
+                of keeping such expressions up-to-date with the latest upstream sources.
+homepage:       https://github.com/expipiplus1/update-nix-fetchgit#readme
+bug-reports:    https://github.com/expipiplus1/update-nix-fetchgit/issues
+author:         Joe Hermaszewski
+maintainer:     Joe Hermaszewski <haskell@monoid.al>
+copyright:      2020 Joe Hermaszewski
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
 extra-source-files:
-  CHANGELOG.md
-  LICENSE
-  README.md
-
-library
-  hs-source-dirs:      src
-  exposed-modules:     Update.Nix.FetchGit
-                     , Update.Span
-                     , Update.Nix.FetchGit.Prefetch
-                     , Update.Nix.FetchGit.Warning
-                     , Update.Nix.FetchGit.Utils
-                     , Update.Nix.Updater
-                     , Nix.Match
-                     , Nix.Match.Typed
-                     , Nix.Comments
-  other-modules:       Update.Nix.FetchGit.Types
-  build-depends:       base >= 4.7 && < 5
-                     , aeson >= 0.9
-                     , async >= 2.1
-                     , bytestring >= 0.10
-                     , data-fix
-                     , github-rest
-                     , hnix >= 0.6
-                     , monad-validate
-                     , mtl
-                     , prettyprinter
-                     , process >= 1.2
-                     , say
-                     , syb
-                     , template-haskell
-                     , text >= 1.2
-                     , time >= 1.5
-                     , utf8-string >= 1.0
-                     , vector
-  default-language:    Haskell2010
-  ghc-options: -Wall
-
-executable update-nix-fetchgit
-  hs-source-dirs:      app
-  main-is:             Main.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
-  build-depends:       base
-                     , text >= 1.2
-                     , update-nix-fetchgit
-                     , optparse-generic >= 1.4.2
-                     , optparse-applicative
-  default-language:    Haskell2010
+    .gitignore
+    default.nix
+    CHANGELOG.md
+    LICENSE
+    README.md
 
 source-repository head
-  type:     git
+  type: git
   location: https://github.com/expipiplus1/update-nix-fetchgit
+
+library
+  exposed-modules:
+      Nix.Comments
+      Nix.Match
+      Nix.Match.Typed
+      Update.Nix.FetchGit
+      Update.Nix.FetchGit.Prefetch
+      Update.Nix.FetchGit.Types
+      Update.Nix.FetchGit.Utils
+      Update.Nix.FetchGit.Warning
+      Update.Nix.Updater
+      Update.Span
+  other-modules:
+      Paths_update_nix_fetchgit
+  hs-source-dirs:
+      src
+  ghc-options: -Wall
+  build-depends:
+      aeson >=0.9
+    , async >=2.1
+    , base >=4.7 && <5
+    , bytestring >=0.10
+    , data-fix
+    , github-rest
+    , hnix >=0.6
+    , monad-validate
+    , mtl
+    , prettyprinter
+    , process >=1.2
+    , say
+    , syb
+    , template-haskell
+    , text >=1.2
+    , time >=1.5
+    , utf8-string >=1.0
+    , vector
+  default-language: Haskell2010
+
+executable update-nix-fetchgit
+  main-is: Main.hs
+  other-modules:
+      Paths_update_nix_fetchgit
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base
+    , optparse-applicative
+    , optparse-generic >=1.4.2
+    , text >=1.2
+    , update-nix-fetchgit
+  default-language: Haskell2010
