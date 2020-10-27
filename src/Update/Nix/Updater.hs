@@ -80,8 +80,10 @@ fetchTarballGithubUpdater getComment = \case
     , "https:" : "" : "github.com" : owner : repo : "archive" : _ <- splitOn
       "/"
       url'
+    , comment <- getComment url
+    , comment /= Just "pin" -- Fall back to the regular tarball updater if we've been instructed to not change this URL
     -> Just $ do
-      let rev = Revision $ fromMaybe "HEAD" (getComment url)
+      let rev = Revision $ fromMaybe "HEAD" comment
           repoUrl = "https://github.com/" <> owner <> "/" <> repo
       pure . Updater $ do
         revision <- getGitRevision repoUrl rev
