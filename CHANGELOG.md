@@ -7,6 +7,7 @@
 - Read comments for branch/tag information
 - Allow pinning revisions in tarball fetches
 - Gate stderr output under `--verbose`
+- Add support for `fetchSubmodules`, `leaveDotGit` and `deepClone`
 
 ### Under the Hood
 
