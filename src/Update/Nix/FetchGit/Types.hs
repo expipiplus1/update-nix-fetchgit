@@ -10,11 +10,21 @@ import           Data.Time                      ( Day )
 import           Nix.Expr                       ( NExprLoc )
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
+import           Control.Monad.Reader
 
-type M = ValidateT (Dual [Warning]) IO
+type M = ReaderT Env (ValidateT (Dual [Warning]) IO)
 
-runM :: M a -> IO (Either [Warning] a)
-runM = fmap (first (reverse . getDual)) . runValidateT
+runM :: Env -> M a -> IO (Either [Warning] a)
+runM env =
+  fmap (first (reverse . getDual)) . runValidateT . flip runReaderT env
+
+newtype Env = Env
+  { sayLog :: Verbosity -> Text -> M ()
+  }
+
+data Verbosity
+  = Verbose
+  | Quiet
 
 newtype Updater = Updater
   { unUpdater :: M (Maybe Day, [SpanUpdate])

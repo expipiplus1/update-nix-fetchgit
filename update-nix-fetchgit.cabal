@@ -59,7 +59,6 @@ library
     , mtl
     , prettyprinter
     , process >=1.2
-    , say
     , syb
     , template-haskell
     , text >=1.2
@@ -80,6 +79,7 @@ executable update-nix-fetchgit
       base
     , optparse-applicative
     , optparse-generic >=1.4.2
+    , say
     , text >=1.2
     , update-nix-fetchgit
   default-language: Haskell2010

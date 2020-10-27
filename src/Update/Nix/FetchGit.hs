@@ -6,6 +6,7 @@ module Update.Nix.FetchGit
   , updatesFromText
   ) where
 
+import           Control.Monad                  ( when )
 import           Data.Fix
 import           Data.Foldable
 import           Data.Maybe
@@ -19,7 +20,6 @@ import qualified Data.Vector                   as V
 import           Nix.Comments
 import           Nix.Expr
 import           Nix.Match.Typed
-import           Say
 import           System.Exit
 import           System.IO
 import           Update.Nix.FetchGit.Types
@@ -34,23 +34,19 @@ import           Update.Span
 --------------------------------------------------------------------------------
 
 -- | Provided FilePath, update Nix file in-place
-processFile :: FilePath -> IO ()
-processFile filename = do
+processFile :: Env -> FilePath -> IO ()
+processFile env filename = do
   t  <- Data.Text.IO.readFile filename
-  t' <- processText t
-  if t == t'
-    then sayErr "No updates"
-    else do
-      -- If updates are needed, write to the file.
-      Data.Text.IO.writeFile filename t'
+  t' <- processText env t
+  -- If updates are needed, write to the file.
+  when (t /= t') $ Data.Text.IO.writeFile filename t'
 
-processText :: Text -> IO Text
-processText t = runM (updatesFromText t) >>= \case
+processText :: Env -> Text -> IO Text
+processText env t = runM env (updatesFromText t) >>= \case
   -- If we have any errors, print them and finish.
   Left  ws -> printErrorAndExit ws
   -- Update the text of the file in memory.
   Right us -> do
-    sayErrString $ "Made " ++ show (length us) ++ " changes"
     pure $ updateSpans us t
  where
   printErrorAndExit :: [Warning] -> IO a
@@ -68,7 +64,12 @@ updatesFromText t = do
   tree <- do
     expr <- fromEither $ ourParseNixText t
     findUpdates (getComment nixLines) expr
-  evalUpdates tree
+  us <- evalUpdates tree
+  case us of
+    []  -> logVerbose "Made No updates"
+    [_] -> logVerbose "Made 1 update"
+    _   -> logVerbose ("Made " <> T.pack (show (length us)) <> " updates")
+  pure us
 
 ----------------------------------------------------------------
 -- Finding updates
@@ -102,7 +103,7 @@ evalUpdates = fmap snd . go
           | Just d <- pure latestDate
           , Just v <- pure versionExpr
           ]
-          <> concat ss
+        <> concat ss
         )
 
 ----------------------------------------------------------------
