@@ -26,14 +26,15 @@ import           Update.Span
 
 type Fetcher = (NExprLoc -> Maybe Comment) -> NExprLoc -> Maybe (M Updater)
 
-fetchers :: [Fetcher]
-fetchers =
-  [ fetchgitUpdater
-  , builtinsFetchGitUpdater
-  , fetchTarballGithubUpdater
-  , builtinsFetchTarballUpdater
-  , fetchGitHubUpdater
-  ]
+fetchers :: (NExprLoc -> Maybe Comment) -> [NExprLoc -> Maybe (M Updater)]
+fetchers getComment =
+  ($ getComment)
+    <$> [ fetchgitUpdater
+        , builtinsFetchGitUpdater
+        , fetchTarballGithubUpdater
+        , builtinsFetchTarballUpdater
+        , fetchGitHubUpdater
+        ]
 
 fetchgitUpdater :: Fetcher
 fetchgitUpdater getComment = \case

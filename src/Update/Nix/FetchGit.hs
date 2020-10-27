@@ -76,7 +76,7 @@ updatesFromText t = do
 
 findUpdates :: (NExprLoc -> Maybe Comment) -> NExprLoc -> M FetchTree
 findUpdates getComment e =
-  let updaters = (\u -> u getComment e) <$> fetchers
+  let updaters = ($ e) <$> fetchers getComment
   in
     case asum updaters of
       Just u  -> UpdaterNode <$> u
