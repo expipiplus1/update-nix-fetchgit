@@ -1,0 +1,54 @@
+name: update-nix-fetchgit
+version: 0.1.2.0
+synopsis: A program to update fetchgit values in Nix expressions
+description: |
+  This command-line utility is meant to be used by people maintaining Nix
+  expressions that fetch files from Git repositories. It automates the process
+  of keeping such expressions up-to-date with the latest upstream sources.
+author: Joe Hermaszewski
+maintainer: Joe Hermaszewski <haskell@monoid.al>
+copyright: 2020 Joe Hermaszewski
+github: expipiplus1/update-nix-fetchgit
+extra-source-files:
+- .gitignore
+- default.nix
+- CHANGELOG.md
+- LICENSE
+- README.md
+
+executables:
+  update-nix-fetchgit:
+    main: Main.hs
+    source-dirs: app
+    ghc-options: -threaded -rtsopts -with-rtsopts=-N
+    dependencies:
+    - base
+    - text >= 1.2
+    - update-nix-fetchgit
+    - optparse-generic >= 1.4.2
+    - optparse-applicative
+
+library:
+  source-dirs: src
+  dependencies:
+  - base >= 4.7 && < 5
+  - aeson >= 0.9
+  - async >= 2.1
+  - bytestring >= 0.10
+  - data-fix
+  - github-rest
+  - hnix >= 0.6
+  - monad-validate
+  - mtl
+  - prettyprinter
+  - process >= 1.2
+  - say
+  - syb
+  - template-haskell
+  - text >= 1.2
+  - time >= 1.5
+  - utf8-string >= 1.0
+  - vector
+
+ghc-options: -Wall
+
