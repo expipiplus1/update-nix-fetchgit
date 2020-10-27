@@ -52,3 +52,27 @@ library:
 
 ghc-options: -Wall
 
+default-extensions:
+- DataKinds
+- DefaultSignatures
+- DeriveAnyClass
+- DeriveDataTypeable
+- DeriveGeneric
+- DerivingStrategies
+- FlexibleContexts
+- FlexibleInstances
+- GADTs
+- LambdaCase
+- MultiParamTypeClasses
+- OverloadedStrings
+- PolyKinds
+- RankNTypes
+- RecordWildCards
+- ScopedTypeVariables
+- StandaloneDeriving
+- TemplateHaskellQuotes
+- TupleSections
+- TypeApplications
+- TypeFamilies
+- TypeOperators
+- ViewPatterns

@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable #-}
 
 -- | This module deals with updating spans of characters in values of type Text.
 --

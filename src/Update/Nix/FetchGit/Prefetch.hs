@@ -1,6 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric  #-}
 
 module Update.Nix.FetchGit.Prefetch
   ( NixPrefetchGitOutput(..)

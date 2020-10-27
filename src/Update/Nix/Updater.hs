@@ -1,10 +1,4 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ViewPatterns #-}
-
 -- | This module exports a list of 'Fetcher's, programs which match on nix
 -- fetching expressions and return programs to update them
 module Update.Nix.Updater
