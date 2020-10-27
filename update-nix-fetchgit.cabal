@@ -45,6 +45,7 @@ library
       Paths_update_nix_fetchgit
   hs-source-dirs:
       src
+  default-extensions: DataKinds DefaultSignatures DeriveAnyClass DeriveDataTypeable DeriveGeneric DerivingStrategies FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses OverloadedStrings PolyKinds RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskellQuotes TupleSections TypeApplications TypeFamilies TypeOperators ViewPatterns
   ghc-options: -Wall
   build-depends:
       aeson >=0.9
@@ -73,6 +74,7 @@ executable update-nix-fetchgit
       Paths_update_nix_fetchgit
   hs-source-dirs:
       app
+  default-extensions: DataKinds DefaultSignatures DeriveAnyClass DeriveDataTypeable DeriveGeneric DerivingStrategies FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses OverloadedStrings PolyKinds RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskellQuotes TupleSections TypeApplications TypeFamilies TypeOperators ViewPatterns
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base

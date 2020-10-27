@@ -1,10 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE TypeApplications  #-}
-{-# LANGUAGE ViewPatterns      #-}
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE QuasiQuotes       #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Update.Nix.FetchGit
   ( processFile
