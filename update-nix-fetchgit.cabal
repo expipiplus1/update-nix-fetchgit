@@ -24,6 +24,32 @@ extra-source-files:
     CHANGELOG.md
     LICENSE
     README.md
+    tests/test_builtins_fetchgit.in.nix
+    tests/test_builtins_fetchgit_update_ignores_sha256.in.nix
+    tests/test_builtins_fetchtarball.in.nix
+    tests/test_builtins_fetchtarball_github.in.nix
+    tests/test_dotgit.in.nix
+    tests/test_github_submodules.in.nix
+    tests/test_max_version.in.nix
+    tests/test_readme_examples.in.nix
+    tests/test_rec_sets.in.nix
+    tests/test_scoped.in.nix
+    tests/test_simple_update.in.nix
+    tests/test_updates_with_other_errors.in.nix
+    tests/test_version_update.in.nix
+    tests/test_builtins_fetchgit.expected.nix
+    tests/test_builtins_fetchgit_update_ignores_sha256.expected.nix
+    tests/test_builtins_fetchtarball.expected.nix
+    tests/test_builtins_fetchtarball_github.expected.nix
+    tests/test_dotgit.expected.nix
+    tests/test_github_submodules.expected.nix
+    tests/test_max_version.expected.nix
+    tests/test_readme_examples.expected.nix
+    tests/test_rec_sets.expected.nix
+    tests/test_scoped.expected.nix
+    tests/test_simple_update.expected.nix
+    tests/test_updates_with_other_errors.expected.nix
+    tests/test_version_update.expected.nix
 
 source-repository head
   type: git
@@ -81,5 +107,28 @@ executable update-nix-fetchgit
     , optparse-generic >=1.4.2
     , say
     , text >=1.2
+    , update-nix-fetchgit
+  default-language: Haskell2010
+
+test-suite update-nix-fetchgit-samples
+  type: exitcode-stdio-1.0
+  main-is: Driver.hs
+  other-modules:
+      Samples
+      Paths_update_nix_fetchgit
+  hs-source-dirs:
+      tests
+  default-extensions: DataKinds DefaultSignatures DeriveAnyClass DeriveDataTypeable DeriveGeneric DerivingStrategies FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses OverloadedStrings PolyKinds RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskellQuotes TupleSections TypeApplications TypeFamilies TypeOperators ViewPatterns
+  ghc-options: -Wall
+  build-depends:
+      base >=4.7 && <5
+    , directory
+    , filepath
+    , process
+    , tasty
+    , tasty-discover
+    , tasty-golden >=2.3
+    , temporary
+    , text
     , update-nix-fetchgit
   default-language: Haskell2010

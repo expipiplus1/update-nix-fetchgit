@@ -15,6 +15,8 @@ extra-source-files:
 - CHANGELOG.md
 - LICENSE
 - README.md
+- tests/test_*.in.nix
+- tests/test_*.expected.nix
 
 executables:
   update-nix-fetchgit:
@@ -49,6 +51,22 @@ library:
   - time >= 1.5
   - utf8-string >= 1.0
   - vector
+
+tests:
+  update-nix-fetchgit-samples:
+    source-dirs: tests
+    main: Driver.hs
+    dependencies:
+    - base >= 4.7 && < 5
+    - directory
+    - filepath
+    - process
+    - tasty
+    - tasty-discover
+    - tasty-golden >= 2.3
+    - temporary
+    - text
+    - update-nix-fetchgit
 
 ghc-options: -Wall
 
