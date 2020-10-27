@@ -67,15 +67,15 @@ Here are some examples of nix expressions which can be updated:
 - Following a branch fetched with `builtins.fetchTarball`
 
     ```nix
-    let
-      nixpkgsSrc = builtins.fetchTarball {
-        url = "https://github.com/NixOS/nixpkgs/archive/foobar.tar.gz"; # nixos-unstable
+    { pkgs ? import (builtins.fetchTarball {
+      url =
+        "https://github.com/NixOS/nixpkgs/archive/foobar.tar.gz"; # nixos-unstable
         # ^ 'foobar' will be replaced with the revision pointed to by 'refs/heads/nixos-unstable'
-        sha256 = "";
-        # ^ sha256 will be updated to the correct hash
-      };
+      sha256 = "";
+      # ^ sha256 will be updated to the correct hash
+    }) { } }:
 
-    in import nixpkgsSrc { }
+    myExpression
     ```
 
 - Updating the hash (instead of trying to build and copying the hash from the
