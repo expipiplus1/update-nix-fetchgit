@@ -17,6 +17,8 @@ The following fetchers are supported:
 - `builtins.fetchGit`
 - `builtins.fetchTarball`
 
+The options `deepClone`, `leaveDotGit`, `fetchSubmodules` are also supported.
+
 Additionally if the `rev` (for git fetches) or `url` attribute has a comment:
 
 - `pin`: the revision or URL will not be updated, only the hash will be
@@ -117,7 +119,9 @@ multiple Git fetches, the latest such date is used.
 
 ## Building from source
 
-The recommended way to build this program from source for development purposes is to download and run `nix-shell` in the top-level source directory and then run `cabal build`.
+The recommended way to build this program from source for development purposes
+is to download and run `nix-shell` in the top-level source directory and then
+run `cabal build`.
 
 # Authors
 
