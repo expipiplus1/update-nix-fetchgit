@@ -1,55 +1,134 @@
-name:                update-nix-fetchgit
-version:             0.1.2.0
-synopsis:            A program to update fetchgit values in Nix expressions
-description:         This command-line utility is meant to be used by people maintaining Nix expressions that fetch files from Git repositories.
-                     It automates the process of keeping such expressions up-to-date with the latest upstream sources.
-homepage:            https://github.com/expipiplus1/update-nix-fetchgit#readme
-license:             BSD3
-license-file:        LICENSE
-author:              Joe Hermaszewski
-maintainer:          haskell@monoid.al
-copyright:           2015 Joe Hermaszewski
-category:            Nix
-build-type:          Simple
-cabal-version:       >=1.10
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.34.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           update-nix-fetchgit
+version:        0.2
+synopsis:       A program to update fetchgit values in Nix expressions
+description:    This command-line utility is meant to be used by people maintaining Nix
+                expressions that fetch files from Git repositories. It automates the process
+                of keeping such expressions up-to-date with the latest upstream sources.
+homepage:       https://github.com/expipiplus1/update-nix-fetchgit#readme
+bug-reports:    https://github.com/expipiplus1/update-nix-fetchgit/issues
+author:         Joe Hermaszewski
+maintainer:     Joe Hermaszewski <haskell@monoid.al>
+copyright:      2020 Joe Hermaszewski
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
 extra-source-files:
-  CHANGELOG.md
-  LICENSE
-  README.md
-
-library
-  hs-source-dirs:      src
-  exposed-modules:     Update.Nix.FetchGit
-                     , Update.Span
-                     , Update.Nix.FetchGit.Prefetch
-                     , Update.Nix.FetchGit.Warning
-                     , Update.Nix.FetchGit.Utils
-  other-modules:       Update.Nix.FetchGit.Types
-  build-depends:       base >= 4.7 && < 5
-                     , aeson >= 0.9
-                     , async >= 2.1
-                     , bytestring >= 0.10
-                     , errors >= 2.1
-                     , hnix >= 0.8
-                     , prettyprinter
-                     , process >= 1.2
-                     , text >= 1.2
-                     , time >= 1.5
-                     , transformers >= 0.4
-                     , uniplate >= 1.6
-                     , utf8-string >= 1.0
-  default-language:    Haskell2010
-  ghc-options: -Wall
-
-executable update-nix-fetchgit
-  hs-source-dirs:      app
-  main-is:             Main.hs
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
-  build-depends:       base
-                     , text >= 1.2
-                     , update-nix-fetchgit
-  default-language:    Haskell2010
+    .gitignore
+    default.nix
+    CHANGELOG.md
+    LICENSE
+    README.md
+    tests/test_builtins_fetchgit.in.nix
+    tests/test_builtins_fetchgit_update_ignores_sha256.in.nix
+    tests/test_builtins_fetchtarball.in.nix
+    tests/test_dotgit.in.nix
+    tests/test_max_version.in.nix
+    tests/test_rec_sets.in.nix
+    tests/test_scoped.in.nix
+    tests/test_simple_update.in.nix
+    tests/test_updates_with_other_errors.in.nix
+    tests/test_version_update.in.nix
+    tests/test_builtins_fetchgit.expected.nix
+    tests/test_builtins_fetchgit_update_ignores_sha256.expected.nix
+    tests/test_builtins_fetchtarball.expected.nix
+    tests/test_dotgit.expected.nix
+    tests/test_max_version.expected.nix
+    tests/test_rec_sets.expected.nix
+    tests/test_scoped.expected.nix
+    tests/test_simple_update.expected.nix
+    tests/test_updates_with_other_errors.expected.nix
+    tests/test_version_update.expected.nix
+    tests/networked/test_builtins_fetchtarball_github.in.nix
+    tests/networked/test_github_submodules.in.nix
+    tests/networked/test_readme_examples.in.nix
+    tests/networked/test_builtins_fetchtarball_github.expected.nix
+    tests/networked/test_github_submodules.expected.nix
+    tests/networked/test_readme_examples.expected.nix
 
 source-repository head
-  type:     git
+  type: git
   location: https://github.com/expipiplus1/update-nix-fetchgit
+
+library
+  exposed-modules:
+      Nix.Comments
+      Nix.Match
+      Nix.Match.Typed
+      Update.Nix.FetchGit
+      Update.Nix.FetchGit.Prefetch
+      Update.Nix.FetchGit.Types
+      Update.Nix.FetchGit.Utils
+      Update.Nix.FetchGit.Warning
+      Update.Nix.Updater
+      Update.Span
+  other-modules:
+      Paths_update_nix_fetchgit
+  hs-source-dirs:
+      src
+  default-extensions: DataKinds DefaultSignatures DeriveAnyClass DeriveDataTypeable DeriveGeneric DerivingStrategies FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses OverloadedStrings PolyKinds RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskellQuotes TupleSections TypeApplications TypeFamilies TypeOperators ViewPatterns
+  ghc-options: -Wall
+  build-depends:
+      aeson >=0.9
+    , async >=2.1
+    , base >=4.7 && <5
+    , bytestring >=0.10
+    , data-fix
+    , github-rest
+    , hnix >=0.6
+    , monad-validate
+    , mtl
+    , prettyprinter
+    , process >=1.2
+    , syb
+    , template-haskell
+    , text >=1.2
+    , time >=1.5
+    , utf8-string >=1.0
+    , vector
+  default-language: Haskell2010
+
+executable update-nix-fetchgit
+  main-is: Main.hs
+  other-modules:
+      Paths_update_nix_fetchgit
+  hs-source-dirs:
+      app
+  default-extensions: DataKinds DefaultSignatures DeriveAnyClass DeriveDataTypeable DeriveGeneric DerivingStrategies FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses OverloadedStrings PolyKinds RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskellQuotes TupleSections TypeApplications TypeFamilies TypeOperators ViewPatterns
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base
+    , optparse-applicative
+    , optparse-generic >=1.4.2
+    , say
+    , text >=1.2
+    , update-nix-fetchgit
+  default-language: Haskell2010
+
+test-suite update-nix-fetchgit-samples
+  type: exitcode-stdio-1.0
+  main-is: Driver.hs
+  other-modules:
+      Samples
+      Paths_update_nix_fetchgit
+  hs-source-dirs:
+      tests
+  default-extensions: DataKinds DefaultSignatures DeriveAnyClass DeriveDataTypeable DeriveGeneric DerivingStrategies FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses OverloadedStrings PolyKinds RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskellQuotes TupleSections TypeApplications TypeFamilies TypeOperators ViewPatterns
+  ghc-options: -Wall
+  build-depends:
+      base >=4.7 && <5
+    , directory
+    , filepath
+    , process
+    , tasty
+    , tasty-discover
+    , tasty-golden >=2.3
+    , temporary
+    , text
+    , update-nix-fetchgit
+  default-language: Haskell2010

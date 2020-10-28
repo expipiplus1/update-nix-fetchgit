@@ -1,46 +1,59 @@
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ViewPatterns      #-}
 
 module Update.Nix.FetchGit.Utils
   ( RepoLocation(..)
+  , ourParseNixText
   , ourParseNixFile
   , extractUrlString
+  , prettyRepoLocation
   , quoteString
   , extractFuncName
-  , extractAttr
-  , findAttr
-  , matchAttr
   , exprText
+  , exprBool
   , exprSpan
+  , containsPosition
   , parseISO8601DateToDay
   , formatWarning
+  , fromEither
+  , note
+  , refute1
+  , logVerbose
+  , logNormal
   ) where
 
-import           Data.Maybe                               ( catMaybes )
+import           Control.Monad.IO.Class         ( MonadIO(liftIO) )
+import           Control.Monad.Reader           ( MonadReader(ask) )
+import           Control.Monad.Validate
 import           Data.List.NonEmpty            as NE
-import           Data.Text                                ( Text
-                                                          , unpack
-                                                          , splitOn
-                                                          )
-import           Data.Time                                ( parseTimeM
-                                                          , defaultTimeLocale
-                                                          )
-import           Nix.Parser                               ( parseNixFileLoc
-                                                          , Result(..)
-                                                          )
-import           Nix.Reduce
-import           Nix.Expr                          hiding ( SourcePos )
+import           Data.Monoid
+import           Data.Text                      ( Text
+                                                , splitOn
+                                                , unpack
+                                                )
+import           Data.Time                      ( Day
+                                                , defaultTimeLocale
+                                                , parseTimeM
+                                                )
+import           Nix.Expr                hiding ( SourcePos )
+import           Nix.Parser                     ( Result(..)
+                                                , parseNixFileLoc
+                                                , parseNixTextLoc
+                                                )
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
+import qualified Data.Text as T
+import Nix.Atoms (NAtom(NBool))
+import Data.Fix
 
-ourParseNixFile :: FilePath -> IO (Either Warning NExprLoc)
-ourParseNixFile f =
-  parseNixFileLoc f >>= \case
-    Failure parseError -> pure $ Left (CouldNotParseInput parseError)
-    Success expr -> pure <$> reduceExpr Nothing expr
+ourParseNixText :: Text -> Either Warning NExprLoc
+ourParseNixText t = case parseNixTextLoc t of
+  Failure parseError -> Left (CouldNotParseInput parseError)
+  Success expr       -> pure expr
+
+ourParseNixFile :: FilePath -> M NExprLoc
+ourParseNixFile f = liftIO (parseNixFileLoc f) >>= \case
+  Failure parseError -> refute1 (CouldNotParseInput parseError)
+  Success expr       -> pure expr
 
 -- | Get the url from either a nix expression for the url or a repo and owner
 -- expression.
@@ -49,6 +62,12 @@ extractUrlString = \case
   URL u -> u
   GitHub o r -> "https://github.com/" <> o <> "/" <> r <> ".git"
   GitLab o r -> "https://gitlab.com/" <> o <> "/" <> r <> ".git"
+
+prettyRepoLocation :: RepoLocation -> Text
+prettyRepoLocation = \case
+  URL u      -> u
+  GitHub o r -> o <> "/" <> r
+  GitLab o r -> o <> "/" <> r
 
 -- Add double quotes around a string so it can be inserted into a Nix
 -- file as a string literal.
@@ -64,6 +83,11 @@ exprText = \case
   (AnnE _ (NStr (DoubleQuoted [Plain t]))) -> pure t
   e -> Left (NotAString e)
 
+exprBool :: NExprLoc -> Either Warning Bool
+exprBool = \case
+  (AnnE _ (NConstant (NBool b))) -> pure b
+  e                              -> Left (NotABool e)
+
 -- | Get the 'SrcSpan' covering a particular expression.
 exprSpan :: NExprLoc -> SrcSpan
 exprSpan (AnnE s _) = s
@@ -77,51 +101,92 @@ extractFuncName (AnnE _ (NSym name)) = Just name
 extractFuncName (AnnE _ (NSelect _ (NE.last -> StaticKey name) _)) = Just name
 extractFuncName _ = Nothing
 
--- | Extract a named attribute from an attrset.
-extractAttr :: Text -> [Binding a] -> Either Warning a
-extractAttr name bs = case catMaybes (matchAttr name <$> bs) of
-  [x] -> pure x
-  []  -> Left (MissingAttr name)
-  _   -> Left (DuplicateAttrs name)
-
--- | Find a named attribute in an attrset.  This is appropriate for
--- the case when a missing attribute is not an error.
-findAttr :: Text -> [Binding a] -> Either Warning (Maybe a)
-findAttr name bs = case catMaybes (matchAttr name <$> bs) of
-  [x] -> pure (Just x)
-  []  -> pure Nothing
-  _   -> Left (DuplicateAttrs name)
-
--- | Returns 'Just value' if this attribute's key matches the text, otherwise
--- Nothing.
-matchAttr :: Text -> Binding a -> Maybe a
-matchAttr t = \case
-  NamedVar (StaticKey t' :|[]) x _ | t == t' -> Just x
-  NamedVar _ _ _ -> Nothing
-  Inherit _ _ _  -> Nothing
-
 -- Takes an ISO 8601 date and returns just the day portion.
 parseISO8601DateToDay :: Text -> Either Warning Day
 parseISO8601DateToDay t =
-  let justDate = (unpack . Prelude.head . splitOn "T") t in
-  case parseTimeM False defaultTimeLocale "%Y-%m-%d" justDate of
-    Nothing -> Left $ InvalidDateString t
-    Just day -> pure day
+  let justDate = (unpack . Prelude.head . splitOn "T") t
+  in  maybe (Left $ InvalidDateString t)
+            Right
+            (parseTimeM False defaultTimeLocale "%Y-%m-%d" justDate)
 
-formatWarning :: Warning -> String
-formatWarning (CouldNotParseInput doc) = show doc
+formatWarning :: Warning -> Text
+formatWarning (CouldNotParseInput doc) = tShow doc
 formatWarning (MissingAttr attrName) =
-  "Error: The \"" <> unpack attrName <> "\" attribute is missing."
+  "Error: The \"" <> attrName <> "\" attribute is missing."
 formatWarning (DuplicateAttrs attrName) =
-  "Error: The \"" <> unpack attrName <> "\" attribute appears twice in a set."
+  "Error: The \"" <> attrName <> "\" attribute appears twice in a set."
 formatWarning (NotAString expr) =
   "Error: The expression at "
-  <> (prettyPrintSourcePos . spanBegin . exprSpan) expr
-  <> " is not a string literal."
+    <> (T.pack . prettyPrintSourcePos . spanBegin . exprSpan) expr
+    <> " is not a string literal."
+formatWarning (NotABool expr) =
+  "Error: The expression at "
+    <> (T.pack . prettyPrintSourcePos . spanBegin . exprSpan) expr
+    <> " is not a boolean literal."
 formatWarning (NixPrefetchGitFailed exitCode errorOutput) =
-  "Error: nix-prefetch-git failed with exit code " <> show exitCode
-  <> " and error output:\n" <> unpack errorOutput
+  "Error: nix-prefetch-git failed with exit code "
+    <> tShow exitCode
+    <> " and error output:\n"
+    <> errorOutput
 formatWarning (InvalidPrefetchGitOutput output) =
-  "Error: Output from nix-prefetch-git is invalid:\n" <> show output
+  "Error: Output from nix-prefetch-git is invalid:\n" <> tShow output
+formatWarning (NixPrefetchUrlFailed exitCode errorOutput) =
+  "Error: nix-prefetch-url failed with exit code "
+    <> tShow exitCode
+    <> " and error output:\n"
+    <> errorOutput
+formatWarning (InvalidPrefetchUrlOutput output) =
+  "Error: Output from nix-prefetch-url is invalid:\n" <> tShow output
 formatWarning (InvalidDateString text) =
-  "Error: Date string is invalid: " <> show text
+  "Error: Date string is invalid: " <> tShow text
+formatWarning (GitLsRemoteFailed exitCode errorOutput) =
+  "Error: git ls-remote failed with exit code "
+    <> tShow exitCode
+    <> " and error output:\n"
+    <> errorOutput
+formatWarning (NoSuchRef text) = "Error: No such ref: " <> tShow text
+formatWarning (InvalidGitLsRemoteOutput output) =
+  "Error: Output from git ls-remote is invalid:\n" <> tShow output
+
+tShow :: Show a => a -> Text
+tShow = T.pack . show
+
+----------------------------------------------------------------
+-- Locations
+----------------------------------------------------------------
+
+containsPosition :: NExprLoc -> (Int, Int) -> Bool
+containsPosition (Fix (Compose (Ann (SrcSpan begin end) _))) p =
+  let unSourcePos (SourcePos _ l c) = (unPos l, unPos c)
+  in  p >= unSourcePos begin && p < unSourcePos end
+
+----------------------------------------------------------------
+-- Errors
+----------------------------------------------------------------
+
+fromEither :: Either Warning a -> M a
+fromEither = \case
+  Left  e -> refute1 e
+  Right a -> pure a
+
+note :: Warning -> Maybe a -> M a
+note e = \case
+  Nothing -> refute1 e
+  Just a -> pure a
+
+refute1 :: Warning -> M a
+refute1 = refute . Dual . pure
+
+----------------------------------------------------------------
+-- Logging
+----------------------------------------------------------------
+
+logVerbose :: Text -> M ()
+logVerbose t = do
+  Env{..} <- ask
+  liftIO $ sayLog Verbose t
+
+logNormal :: Text -> M ()
+logNormal t = do
+  Env {..} <- ask
+  liftIO $ sayLog Normal t

@@ -1,0 +1,98 @@
+name: update-nix-fetchgit
+version: 0.2
+synopsis: A program to update fetchgit values in Nix expressions
+description: |
+  This command-line utility is meant to be used by people maintaining Nix
+  expressions that fetch files from Git repositories. It automates the process
+  of keeping such expressions up-to-date with the latest upstream sources.
+author: Joe Hermaszewski
+maintainer: Joe Hermaszewski <haskell@monoid.al>
+copyright: 2020 Joe Hermaszewski
+github: expipiplus1/update-nix-fetchgit
+extra-source-files:
+- .gitignore
+- default.nix
+- CHANGELOG.md
+- LICENSE
+- README.md
+- tests/test_*.in.nix
+- tests/test_*.expected.nix
+- tests/networked/test_*.in.nix
+- tests/networked/test_*.expected.nix
+
+executables:
+  update-nix-fetchgit:
+    main: Main.hs
+    source-dirs: app
+    ghc-options: -threaded -rtsopts -with-rtsopts=-N
+    dependencies:
+    - base
+    - optparse-applicative
+    - optparse-generic >= 1.4.2
+    - say
+    - text >= 1.2
+    - update-nix-fetchgit
+
+library:
+  source-dirs: src
+  dependencies:
+  - base >= 4.7 && < 5
+  - aeson >= 0.9
+  - async >= 2.1
+  - bytestring >= 0.10
+  - data-fix
+  - github-rest
+  - hnix >= 0.6
+  - monad-validate
+  - mtl
+  - prettyprinter
+  - process >= 1.2
+  - syb
+  - template-haskell
+  - text >= 1.2
+  - time >= 1.5
+  - utf8-string >= 1.0
+  - vector
+
+tests:
+  update-nix-fetchgit-samples:
+    source-dirs: tests
+    main: Driver.hs
+    dependencies:
+    - base >= 4.7 && < 5
+    - directory
+    - filepath
+    - process
+    - tasty
+    - tasty-discover
+    - tasty-golden >= 2.3
+    - temporary
+    - text
+    - update-nix-fetchgit
+
+ghc-options: -Wall
+
+default-extensions:
+- DataKinds
+- DefaultSignatures
+- DeriveAnyClass
+- DeriveDataTypeable
+- DeriveGeneric
+- DerivingStrategies
+- FlexibleContexts
+- FlexibleInstances
+- GADTs
+- LambdaCase
+- MultiParamTypeClasses
+- OverloadedStrings
+- PolyKinds
+- RankNTypes
+- RecordWildCards
+- ScopedTypeVariables
+- StandaloneDeriving
+- TemplateHaskellQuotes
+- TupleSections
+- TypeApplications
+- TypeFamilies
+- TypeOperators
+- ViewPatterns

@@ -1,53 +1,61 @@
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE DeriveTraversable  #-}
-{-# LANGUAGE FlexibleContexts   #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Update.Nix.FetchGit.Types where
 
-import           Data.Data (Data)
-import           Data.Text (Text)
-import qualified Data.Time (Day)
-import           Nix.Expr  (NExprLoc)
+import           Control.Monad.Reader
+import           Control.Monad.Validate
+import           Control.Monad.Validate.Internal
+import           Data.Bifunctor                 ( Bifunctor(first) )
+import           Data.Functor
+import           Data.Monoid
+import           Data.Text                      ( Text )
+import           Data.Time                      ( Day )
+import           Nix.Expr                       ( NExprLoc )
+import           Update.Nix.FetchGit.Warning
+import           Update.Span
 
--- | The day portion of a date, with no timezone information.
-type Day = Data.Time.Day
+type M = ReaderT Env (ValidateT (Dual [Warning]) IO)
+
+runM :: Env -> M a -> IO ([Warning], Maybe a)
+runM env = fmap (first (reverse . getDual)) . asWarnings . flip runReaderT env
+
+-- | Runs a 'ValidateT' computation returning the errors raised by 'refute' or
+-- 'dispute' if any, as well as returning the computation’s result if possible.
+asWarnings :: (Functor m, Monoid e) => ValidateT e m a -> m (e, Maybe a)
+asWarnings m = unValidateT MNothing m <&> \case
+  Left  e             -> (e, Nothing)
+  Right (MJust e , a) -> (e, Just a)
+  Right (MNothing, a) -> (mempty, Just a)
+
+data Env = Env
+  { sayLog :: Verbosity -> Text -> IO ()
+  , updateLocations :: [(Int, Int)]
+  }
+
+data Verbosity
+  = Verbose
+  | Normal
+  | Quiet
+
+newtype Updater = Updater
+  { unUpdater :: M (Maybe Day, [SpanUpdate])
+  }
 
 -- | A tree with a structure similar to the AST of the Nix file we are
 -- parsing, but which only contains the information we care about.
--- The fetchInfo type parameter allows this tree to be used at
--- different stages in the program where we know different amounts of
--- information about a fetch expression.
-data FetchTree fetchInfo = Node { nodeVersionExpr :: Maybe NExprLoc
-                                , nodeChildren    :: [FetchTree fetchInfo]
-                                }
-                         | FetchNode fetchInfo
-  deriving (Show, Data, Functor, Foldable, Traversable)
-
--- | Represents the arguments to a call to fetchgit, fetchFromGitHub
---   or fetchFromGitLab as parsed from a .nix file.
---   sha256Expr will be empty on calls to builtins.fetchGit.
-data FetchGitArgs = FetchGitArgs { repoLocation :: RepoLocation
-                                 , revExpr      :: NExprLoc
-                                 , sha256Expr   :: Maybe NExprLoc
-                                 }
-  deriving (Show, Data)
-
--- | Updated information about a fetchgit call that was retrieved from
--- the internet.
-data FetchGitLatestInfo = FetchGitLatestInfo { originalInfo :: FetchGitArgs
-                                             , latestRev    :: Text
-                                             , latestSha256 :: Text
-                                             , latestDate   :: Day
-                                             }
-  deriving (Show, Data)
+data FetchTree
+  = Node { nodeVersionExpr :: Maybe NExprLoc
+         , nodeChildren    :: [FetchTree]
+         }
+  | UpdaterNode Updater
 
 -- | A repo is either specified by URL or by Github owner/repo.
 data RepoLocation = URL Text
-                  | GitHub { owner :: Text
-                           , repo  :: Text
+                  | GitHub { repoOwner :: Text
+                           , repoRepo  :: Text
                            }
-                  | GitLab { owner :: Text
-                           , repo  :: Text
+                  | GitLab { repoOwner :: Text
+                           , repoRepo  :: Text
                            }
-  deriving (Show, Data)
+  deriving Show
+
