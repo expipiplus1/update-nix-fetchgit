@@ -5,6 +5,7 @@ module Samples where
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Golden (goldenVsFile)
 import           System.FilePath ((</>))
+import           Data.Bool (bool)
 import           Data.Maybe (mapMaybe)
 
 import qualified Data.List
@@ -19,6 +20,7 @@ import qualified System.Process
 
 import qualified Update.Nix.FetchGit
 import           Update.Nix.FetchGit.Types (Env(Env))
+import Data.Text.IO (hPutStrLn)
 
 -- | Provided output file @f@ pointing to e.g. @tests/test_rec_sets.out.nix@
 -- * turn this into @tests/test_rec_sets.in.nix@
@@ -70,19 +72,37 @@ runTest f =
 
 test_derivation :: IO TestTree
 test_derivation = do
-  allSamples <-
-    mapMaybe (dropSuffix ".in.nix") <$> System.Directory.listDirectory
-      "tests"
-  print allSamples
-  pure $ testGroup "golden" $ map mk allSamples
+  localSamples     <- findSamples "tests"
+  networkedSamples <- findSamples "tests/networked"
+  samples          <- inNixBuild >>= \case
+    False -> pure $ localSamples <> networkedSamples
+    True  -> do
+      hPutStrLn System.IO.stderr "Skipping networked tests inside Nix build"
+      pure localSamples
+  pure $ testGroup "golden" $ map mk samples
  where
   mk n =
-    let fp   = "tests/"
-        tEx  = (fp ++ n ++ ".expected.nix")
-        tOut = (fp ++ n ++ ".out.nix")
+    let tEx  = (n ++ ".expected.nix")
+        tOut = (n ++ ".out.nix")
     in  goldenVsFile ("update of " ++ tOut) tEx tOut (runTest tOut)
+
+findSamples :: FilePath -> IO [String]
+findSamples dir =
+  fmap (dir </>)
+    .   mapMaybe (dropSuffix ".in.nix")
+    <$> System.Directory.listDirectory dir
 
 dropSuffix :: String -> String -> Maybe String
 dropSuffix s t = if s `Data.List.isSuffixOf` t
   then Just $ take (length t - length s) t
   else Nothing
+
+-- From https://github.com/input-output-hk/ouroboros-network
+-- | Infer from environment variables whether we are running within a Nix build
+-- (and not just a nix-shell).
+inNixBuild :: IO Bool
+inNixBuild = do
+  let testEnv = fmap (maybe False (not . null)) . System.Environment.lookupEnv
+  haveNixBuildDir <- testEnv "NIX_BUILD_TOP"
+  inNixShell      <- testEnv "IN_NIX_SHELL"
+  pure (haveNixBuildDir && not inNixShell)
