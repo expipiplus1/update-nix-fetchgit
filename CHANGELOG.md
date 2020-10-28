@@ -2,6 +2,8 @@
 
 ## WIP
 
+## [0.2] - 2020-10-28
+
 - Update hashes in calls to `builtins.fetchTarball`
 - Allow updating tarball urls in fetched from GitHub
 - Read comments for branch/tag information
