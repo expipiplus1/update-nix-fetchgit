@@ -28,6 +28,8 @@ Additionally if the `rev` (for git fetches) or `url` attribute has a comment:
 
 ## Usage
 
+### As a command line tool
+
 Pass the name of the files to be updated in place or pass no files to read and
 write to `stdin` and `stdout` (useful as a filter in an editor).
 
@@ -42,6 +44,27 @@ which are matched.
 
 Please open an issue if `update-nix-fetchgit` doesn't recognize a fetcher and
 you think it could.
+
+### From Vim
+
+This VimScript will bind `<leader>u` to update the fetcher under the cursor.
+
+The mnemonic is `u` for "it's un*U*sual to update things in this way"
+
+```viml
+" A helper to preserve the cursor location with filters
+function! Preserve(command)
+  let w = winsaveview()
+  execute a:command
+  call winrestview(w)
+endfunction
+
+" Update fetcher under cursor, note that this might take a little while if the
+" fetched path is large.
+autocmd FileType nix map <nowait> <leader>u :call Preserve("%!update-nix-fetchgit --location=" . line(".") . ":" . col("."))<CR>
+```
+
+[![asciicast](https://asciinema.org/a/fJesaOF7jGKjYcLtUCsOqrZX6.svg)](https://asciinema.org/a/fJesaOF7jGKjYcLtUCsOqrZX6)
 
 ## Examples
 

@@ -27,11 +27,8 @@ extra-source-files:
     tests/test_builtins_fetchgit.in.nix
     tests/test_builtins_fetchgit_update_ignores_sha256.in.nix
     tests/test_builtins_fetchtarball.in.nix
-    tests/test_builtins_fetchtarball_github.in.nix
     tests/test_dotgit.in.nix
-    tests/test_github_submodules.in.nix
     tests/test_max_version.in.nix
-    tests/test_readme_examples.in.nix
     tests/test_rec_sets.in.nix
     tests/test_scoped.in.nix
     tests/test_simple_update.in.nix
@@ -40,16 +37,19 @@ extra-source-files:
     tests/test_builtins_fetchgit.expected.nix
     tests/test_builtins_fetchgit_update_ignores_sha256.expected.nix
     tests/test_builtins_fetchtarball.expected.nix
-    tests/test_builtins_fetchtarball_github.expected.nix
     tests/test_dotgit.expected.nix
-    tests/test_github_submodules.expected.nix
     tests/test_max_version.expected.nix
-    tests/test_readme_examples.expected.nix
     tests/test_rec_sets.expected.nix
     tests/test_scoped.expected.nix
     tests/test_simple_update.expected.nix
     tests/test_updates_with_other_errors.expected.nix
     tests/test_version_update.expected.nix
+    tests/networked/test_builtins_fetchtarball_github.in.nix
+    tests/networked/test_github_submodules.in.nix
+    tests/networked/test_readme_examples.in.nix
+    tests/networked/test_builtins_fetchtarball_github.expected.nix
+    tests/networked/test_github_submodules.expected.nix
+    tests/networked/test_readme_examples.expected.nix
 
 source-repository head
   type: git

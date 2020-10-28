@@ -17,6 +17,8 @@ extra-source-files:
 - README.md
 - tests/test_*.in.nix
 - tests/test_*.expected.nix
+- tests/networked/test_*.in.nix
+- tests/networked/test_*.expected.nix
 
 executables:
   update-nix-fetchgit:
