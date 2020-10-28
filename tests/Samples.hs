@@ -5,7 +5,9 @@ module Samples where
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Golden (goldenVsFile)
 import           System.FilePath ((</>))
+import           Data.Maybe (mapMaybe)
 
+import qualified Data.List
 import qualified Data.Text
 import qualified Data.Text.IO
 import qualified System.Environment
@@ -66,32 +68,21 @@ runTest f =
     replaceFile f what with =
       Data.Text.IO.readFile f >>= Data.Text.IO.writeFile f . Data.Text.replace what with
 
-allSamples :: [String]
-allSamples =
-  [ "test_builtins_fetchgit"
-  , "test_builtins_fetchgit_update_ignores_sha256"
-  , "test_builtins_fetchtarball_github"
-  , "test_builtins_fetchtarball"
-  , "test_dotgit"
-  , "test_github_submodules"
-  , "test_max_version"
-  , "test_readme_examples"
-  , "test_rec_sets"
-  , "test_scoped"
-  , "test_simple_update"
-  , "test_updates_with_other_errors"
-  , "test_version_update"
-  ]
-
-test_derivation :: TestTree
-test_derivation = testGroup "golden" $ map mk allSamples
-  where
-    mk n =
-      let
-        fp   = "tests/"
+test_derivation :: IO TestTree
+test_derivation = do
+  allSamples <-
+    mapMaybe (dropSuffix ".in.nix") <$> System.Directory.listDirectory
+      "tests"
+  print allSamples
+  pure $ testGroup "golden" $ map mk allSamples
+ where
+  mk n =
+    let fp   = "tests/"
         tEx  = (fp ++ n ++ ".expected.nix")
         tOut = (fp ++ n ++ ".out.nix")
-      in
-        goldenVsFile
-          ("update of " ++ tOut)
-          tEx tOut (runTest tOut)
+    in  goldenVsFile ("update of " ++ tOut) tEx tOut (runTest tOut)
+
+dropSuffix :: String -> String -> Maybe String
+dropSuffix s t = if s `Data.List.isSuffixOf` t
+  then Just $ take (length t - length s) t
+  else Nothing
