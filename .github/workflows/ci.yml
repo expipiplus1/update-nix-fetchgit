@@ -51,7 +51,7 @@ jobs:
         cabal build all --only-dependencies --enable-tests --enable-benchmarks --write-ghc-environment-files=always
         mkdir -p $HOME/.local/bin
         cabal install --installdir=$HOME/.local/bin/ tasty-discover
-        run: echo "$HOME/.local/bin/" >> $GITHUB_PATH
+        printf "%s" "$HOME/.local/bin/" >> $GITHUB_PATH
 
     - name: Build
       run: |
