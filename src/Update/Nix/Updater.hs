@@ -34,6 +34,7 @@ fetchers getComment =
         , fetchTarballGithubUpdater
         , builtinsFetchTarballUpdater
         , fetchGitHubUpdater
+        , hackageDirectUpdater
         ]
 
 fetchgitUpdater :: Fetcher
@@ -128,6 +129,32 @@ fetchGitHubUpdater getComment = \case
       let desiredRev = commentToRequest (getComment rev)
       fetchSubmodules' <- fmap (fromMaybe False) . fromEither . traverse exprBool $ fetchSubmodules
       pure $ gitUpdater (fun owner' repo') desiredRev False False fetchSubmodules' rev (Just sha256)
+  _ -> Nothing
+
+-- |
+-- @
+-- callHackageDirect = {pkg, ver, sha256}:
+--   let pkgver = "${pkg}-${ver}";
+--   in self.callCabal2nix pkg (pkgs.fetchzip {
+--        url = "mirror://hackage/${pkgver}/${pkgver}.tar.gz";
+--        inherit sha256;
+--      });
+-- @
+hackageDirectUpdater :: Fetcher
+hackageDirectUpdater _ = \case
+  [matchNixLoc|
+    ^fetcher {
+      pkg = ^pkg;
+      ver = ^ver;
+      sha256 = ^sha256;
+    }
+  |] | Just "callHackageDirect" <- extractFuncName fetcher
+     -> Just $ do
+      pkg' <- fromEither $ exprText pkg
+      ver' <- fromEither $ exprText ver
+      let pkgver = pkg' <> "-" <> ver'
+          url = "mirror://hackage/" <> pkgver <> "/" <> pkgver <> ".tar.gz"
+      pure $ tarballUpdater url sha256
   _ -> Nothing
 
 ----------------------------------------------------------------
