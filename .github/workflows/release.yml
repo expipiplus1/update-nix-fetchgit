@@ -1,0 +1,37 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+    - v*
+
+jobs:
+  build:
+    name: Create Release
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: cachix/install-nix-action@v8
+    - uses: actions/checkout@v2
+
+    - name: Build project
+      run: |
+        mkdir assets
+        nix-build ./release.nix -A sdistTest --no-out-link
+        ln -s "$(nix-build release.nix -A tarball --no-out-link)"/*.tar.gz assets/
+        ln -s "$(nix-build release.nix -A docs --no-out-link)"/*.tar.gz assets/
+        ref="${{ github.ref }}"
+        printf "Release ${ref#"refs/tags/"}\n\n" >release-note.md
+        # Get the section after the WIP section
+        awk '/## WIP/{flag=0;next};/##/{flag=flag+1};flag==1' <changelog.md |
+          sed "/^##/d" >>"release-note.md"
+
+    - name: Create Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        if [ -f release-note.md ]; then
+          hub release create \
+            $(find assets -type f -o -type l -printf "--attach %p ") \
+            --file release-note.md \
+            ${{ github.ref }}
+        fi
