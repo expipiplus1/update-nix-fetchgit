@@ -6,6 +6,12 @@ jobs:
   bump:
     runs-on: ubuntu-20.04
 
+    # Only run if we're invoked with a new command comment on a pull request.
+    if: |
+      github.event_name == 'issue_comment' && github.event.action == 'created'
+      && github.event.issue.pull_request != null
+      && startsWith(github.event.comment.body, '/bump')
+
     steps:
     - name: Check for Command
       id: command
@@ -20,20 +26,17 @@ jobs:
         permission-level: write
 
     - name: Get PR Branch
-      if: steps.command.outputs.command-name
       id: comment-branch
       uses: xt0rted/pull-request-comment-branch@v1
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
 
     - uses: cachix/install-nix-action@v11
-      if: steps.command.outputs.command-name
       with:
         nix_path: nixpkgs=channel:nixos-unstable
 
     # Checkout the pull request branch
     - uses: actions/checkout@v2
-      if: steps.command.outputs.command-name
       with:
         ssh-key: ${{ secrets.DEPLOY_KEY }}
         repository: ${{ github.event.client_payload.pull_request.head.repo.full_name
@@ -41,7 +44,6 @@ jobs:
         ref: ${{ steps.comment-branch.outputs.ref }}
 
     - uses: expipiplus1/action-automation/bump-version@HEAD
-      if: steps.command.outputs.command-name
       with:
         packageInfos: |
           update-nix-fetchgit v .
@@ -50,4 +52,3 @@ jobs:
 
     - run: |
         git push origin HEAD:"${{ steps.comment-branch.outputs.ref }}"
-      if: steps.command.outputs.command-name
