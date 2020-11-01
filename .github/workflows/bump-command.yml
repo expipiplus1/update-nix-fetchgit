@@ -10,6 +10,7 @@ jobs:
     - name: Check for Command
       id: command
       uses: xt0rted/slash-command-action@v1
+      continue-on-error: true
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
         command: bump
@@ -19,17 +20,20 @@ jobs:
         permission-level: write
 
     - name: Get PR Branch
+      if: steps.command.outputs.command-name
       id: comment-branch
       uses: xt0rted/pull-request-comment-branch@v1
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
 
     - uses: cachix/install-nix-action@v11
+      if: steps.command.outputs.command-name
       with:
         nix_path: nixpkgs=channel:nixos-unstable
 
     # Checkout the pull request branch
     - uses: actions/checkout@v2
+      if: steps.command.outputs.command-name
       with:
         ssh-key: ${{ secrets.DEPLOY_KEY }}
         repository: ${{ github.event.client_payload.pull_request.head.repo.full_name
@@ -37,6 +41,7 @@ jobs:
         ref: ${{ steps.comment-branch.outputs.ref }}
 
     - uses: expipiplus1/action-automation/bump-version@HEAD
+      if: steps.command.outputs.command-name
       with:
         packageInfos: |
           update-nix-fetchgit v .
@@ -45,3 +50,4 @@ jobs:
 
     - run: |
         git push origin HEAD:"${{ steps.comment-branch.outputs.ref }}"
+      if: steps.command.outputs.command-name
