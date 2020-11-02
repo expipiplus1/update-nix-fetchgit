@@ -25,6 +25,7 @@ extra-source-files:
     CHANGELOG.md
     LICENSE
     README.md
+    tests/fakeRepo.sh
     tests/test_builtins_fetchgit.in.nix
     tests/test_builtins_fetchgit_update_ignores_sha256.in.nix
     tests/test_builtins_fetchtarball.in.nix

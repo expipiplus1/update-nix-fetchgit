@@ -16,6 +16,7 @@ extra-source-files:
 - CHANGELOG.md
 - LICENSE
 - README.md
+- tests/fakeRepo.sh
 - tests/test_*.in.nix
 - tests/test_*.expected.nix
 - tests/networked/test_*.in.nix
