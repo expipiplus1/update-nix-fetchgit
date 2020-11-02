@@ -2,6 +2,10 @@
 
 ## WIP
 
+## [0.2.1] - 2020-11-01
+
+- Add support for `callHackageDirect`
+
 ## [0.2] - 2020-10-28
 
 - Update hashes in calls to `builtins.fetchTarball`
