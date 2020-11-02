@@ -19,6 +19,7 @@ license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
+    package.yaml
     .gitignore
     default.nix
     CHANGELOG.md
@@ -46,11 +47,9 @@ extra-source-files:
     tests/test_version_update.expected.nix
     tests/networked/test_builtins_fetchtarball_github.in.nix
     tests/networked/test_github_submodules.in.nix
-    tests/networked/test_hackage_direct.in.nix
     tests/networked/test_readme_examples.in.nix
     tests/networked/test_builtins_fetchtarball_github.expected.nix
     tests/networked/test_github_submodules.expected.nix
-    tests/networked/test_hackage_direct.expected.nix
     tests/networked/test_readme_examples.expected.nix
 
 source-repository head

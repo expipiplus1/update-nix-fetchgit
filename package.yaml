@@ -10,6 +10,7 @@ maintainer: Joe Hermaszewski <haskell@monoid.al>
 copyright: 2020 Joe Hermaszewski
 github: expipiplus1/update-nix-fetchgit
 extra-source-files:
+- package.yaml
 - .gitignore
 - default.nix
 - CHANGELOG.md
