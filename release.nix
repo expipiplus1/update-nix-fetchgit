@@ -1,4 +1,4 @@
-{ pkgs ? import <nixpkgs> { }, compiler ? "ghc884" }:
+{ pkgs ? import ./nixpkgs.nix, compiler ? "ghc884" }:
 
 with pkgs.haskell.lib;
 
