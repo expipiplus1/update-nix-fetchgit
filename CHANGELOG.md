@@ -2,6 +2,8 @@
 
 ## WIP
 
+## [0.2.2] - 2020-11-03
+
 - Require hnix version 0.11 with several important bugfixes
 
 ## [0.2.1] - 2020-11-01
