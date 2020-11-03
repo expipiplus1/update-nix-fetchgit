@@ -2,6 +2,8 @@
 
 ## WIP
 
+- Require hnix version 0.11 with several important bugfixes
+
 ## [0.2.1] - 2020-11-01
 
 - Add support for `callHackageDirect`

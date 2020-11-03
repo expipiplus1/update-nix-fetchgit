@@ -16,15 +16,12 @@ let
       overrides = self: super:
         {
           prettyprinter = self.prettyprinter_1_7_0; # at least 1.7
-          hnix = overrideSrc super.hnix {
-            src = pkgs.fetchFromGitHub {
-              owner = "expipiplus1";
-              repo = "hnix";
-              rev =
-                "9bbb9f8d4a22f88dce5004996c57b9a48eacbf4f"; # update-nix-fetchgit
-              sha256 = "1xwcf3mih7zrc5dfc75g2wssl270aifsz4i00maqrw4w6bwaff0k";
-            };
-          };
+          hnix = self.callHackageDirect {
+            pkg = "hnix";
+            ver = "0.11.0";
+            sha256 = "03xmp18g13cxcb5s4chb1cprbn94bfhb9ny0w3qz5lfia5g3pb5b";
+          } { };
+          neat-interpolation = self.neat-interpolation_0_5_1_2;
           data-fix = self.data-fix_0_3_0;
           optparse-generic = self.optparse-generic_1_4_4;
           optparse-applicative = self.optparse-applicative_0_16_0_0;

@@ -82,7 +82,7 @@ library
     , bytestring >=0.10
     , data-fix
     , github-rest
-    , hnix >=0.6
+    , hnix >=0.11
     , monad-validate
     , mtl
     , prettyprinter
