@@ -1,10 +1,2 @@
 packages:             ./*.cabal
 optimization:         2
-
-source-repository-package
-  type: git
-  location: https://github.com/expipiplus1/hnix
-  tag: 9bbb9f8d4a22f88dce5004996c57b9a48eacbf4f
-
-package hnix
-  tests: False
