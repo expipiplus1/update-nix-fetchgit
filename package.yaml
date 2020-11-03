@@ -5,6 +5,7 @@ description: |
   This command-line utility is meant to be used by people maintaining Nix
   expressions that fetch files from Git repositories. It automates the process
   of keeping such expressions up-to-date with the latest upstream sources.
+category: Nix
 author: Joe Hermaszewski
 maintainer: Joe Hermaszewski <haskell@monoid.al>
 copyright: 2020 Joe Hermaszewski
