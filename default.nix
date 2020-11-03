@@ -19,7 +19,6 @@ let
     pkgs.haskell.packages.${compiler'}.override {
       overrides = self: super:
         {
-          prettyprinter = self.prettyprinter_1_7_0; # at least 1.7
           data-fix = self.data-fix_0_3_0;
           optparse-generic = self.optparse-generic_1_4_4;
           optparse-applicative = self.optparse-applicative_0_16_0_0;

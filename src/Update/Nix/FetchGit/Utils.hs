@@ -23,16 +23,19 @@ module Update.Nix.FetchGit.Utils
 import           Control.Monad.IO.Class         ( MonadIO(liftIO) )
 import           Control.Monad.Reader           ( MonadReader(ask) )
 import           Control.Monad.Validate
+import           Data.Fix
 import           Data.List.NonEmpty            as NE
 import           Data.Monoid
 import           Data.Text                      ( Text
                                                 , splitOn
                                                 , unpack
                                                 )
+import qualified Data.Text                     as T
 import           Data.Time                      ( Day
                                                 , defaultTimeLocale
                                                 , parseTimeM
                                                 )
+import           Nix.Atoms                      ( NAtom(NBool) )
 import           Nix.Expr                hiding ( SourcePos )
 import           Nix.Parser                     ( Result(..)
                                                 , parseNixFileLoc
@@ -41,18 +44,15 @@ import           Nix.Parser                     ( Result(..)
 import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
-import qualified Data.Text as T
-import Nix.Atoms (NAtom(NBool))
-import Data.Fix
 
 ourParseNixText :: Text -> Either Warning NExprLoc
 ourParseNixText t = case parseNixTextLoc t of
-  Failure parseError -> Left (CouldNotParseInput parseError)
+  Failure parseError -> Left (CouldNotParseInput (tShow parseError))
   Success expr       -> pure expr
 
 ourParseNixFile :: FilePath -> M NExprLoc
 ourParseNixFile f = liftIO (parseNixFileLoc f) >>= \case
-  Failure parseError -> refute1 (CouldNotParseInput parseError)
+  Failure parseError -> refute1 (CouldNotParseInput (tShow parseError))
   Success expr       -> pure expr
 
 -- | Get the url from either a nix expression for the url or a repo and owner
