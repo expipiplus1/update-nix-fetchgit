@@ -1,4 +1,8 @@
-{ pkgs ? import <nixpkgs> { }, compiler ? null, hoogle ? true
+{ nixpkgsSrc ? builtins.fetchTarball {
+  url =
+    "https://github.com/NixOS/nixpkgs/archive/50a8d606f3527b88fbd9f68048944470c1b900cd.tar.gz"; # haskell-updates
+  sha256 = "07xlglmlhf3q6h8cdi3rfg4b0jk70h42kwpgwdh5b1vz149njins";
+}, pkgs ? import nixpkgsSrc { }, compiler ? null, hoogle ? true
 , forShell ? pkgs.lib.inNixShell }:
 
 let
@@ -16,12 +20,6 @@ let
       overrides = self: super:
         {
           prettyprinter = self.prettyprinter_1_7_0; # at least 1.7
-          hnix = self.callHackageDirect {
-            pkg = "hnix";
-            ver = "0.11.0";
-            sha256 = "03xmp18g13cxcb5s4chb1cprbn94bfhb9ny0w3qz5lfia5g3pb5b";
-          } { };
-          neat-interpolation = self.neat-interpolation_0_5_1_2;
           data-fix = self.data-fix_0_3_0;
           optparse-generic = self.optparse-generic_1_4_4;
           optparse-applicative = self.optparse-applicative_0_16_0_0;
