@@ -10,7 +10,7 @@ jobs:
     name: Create Release
     runs-on: ubuntu-20.04
     steps:
-    - uses: cachix/install-nix-action@v8
+    - uses: cachix/install-nix-action@v12
     - uses: actions/checkout@v2
 
     - name: Build project
