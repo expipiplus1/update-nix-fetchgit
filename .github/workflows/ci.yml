@@ -75,8 +75,7 @@ jobs:
     - run: |
         aws configure set aws_access_key_id nix
         aws configure set aws_secret_access_key "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
-        sudo -H aws configure set aws_access_key_id nix
-        sudo -H aws configure set aws_secret_access_key "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+        sudo cp -r ~/.aws /root/.aws
         sudo sh -c 'printf "%s" "${{ secrets.NIX_SIGNING_KEY }}" > /root/nix-sign.sec'
     - run: |
         drvs=$(nix-instantiate | sed 's/!.*//')
