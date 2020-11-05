@@ -66,5 +66,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: cachix/install-nix-action@v12
+      with:
+        extra_nix_config: |
+          trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= orion:s0C06f1M46DCpHUUP2r8iIrhfytkCbXWltMeMMa4jbw=
+          substituters = https://cache.nixos.org/ s3://nix-cache?region=ap-southeast-1&scheme=https&endpoint=binarycache.home.monoid.al
     - uses: actions/checkout@v2
+    - run: |
+        sudo -H aws configure set aws_access_key_id nix
+        sudo -H aws configure set aws_secret_access_key "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+        sudo cat /root/.aws/credentials
     - run: nix-build
