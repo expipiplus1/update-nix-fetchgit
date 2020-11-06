@@ -1,6 +1,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Main where
+module Main
+  ( main
+  ) where
 
 import           Control.Category               ( (>>>) )
 import           Data.Either                    ( partitionEithers )
@@ -119,11 +121,3 @@ instance ParseField Regex where
 
 instance (e ~ String) => MonadFail (Either e) where
   fail = Left
-
-note :: a -> Maybe b -> Either a b
-note e = maybe (Left e) Right
-
-collectErrors :: [Either e a] -> Either [e] [a]
-collectErrors = partitionEithers >>> \case
-  ([], as) -> Right as
-  (es, _ ) -> Left es
