@@ -5,7 +5,6 @@ module Samples where
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Golden (goldenVsFile)
 import           System.FilePath ((</>))
-import           Data.Bool (bool)
 import           Data.Maybe (mapMaybe)
 
 import qualified Data.List
@@ -30,6 +29,7 @@ import Data.Text.IO (hPutStrLn)
 -- * perform update
 -- * adjust @url@ to point to the expected one
 -- * copy file back to @tests/test_rec_sets.out.nix@ so it be compared to @expected.nix@
+runTest :: String -> IO ()
 runTest f =
   System.IO.Temp.withSystemTempDirectory "test-update-nix-fetchgit" $ \dir ->
     System.IO.Temp.withSystemTempDirectory "test-update-nix-fetchgit-store" $ \storeDir -> do
@@ -67,8 +67,8 @@ runTest f =
 
   System.Directory.copyFile (dir </> inBase) f
   where
-    replaceFile f what with =
-      Data.Text.IO.readFile f >>= Data.Text.IO.writeFile f . Data.Text.replace what with
+    replaceFile f' what with =
+      Data.Text.IO.readFile f' >>= Data.Text.IO.writeFile f' . Data.Text.replace what with
 
 test_derivation :: IO TestTree
 test_derivation = do
