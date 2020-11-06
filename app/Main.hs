@@ -1,5 +1,8 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 
-module Main where
+module Main
+  ( main
+  ) where
 
 import           Data.Foldable
 import qualified Data.Text.IO                  as T
@@ -14,6 +17,7 @@ import           Text.ParserCombinators.ReadP   ( char
                                                 , readS_to_P
                                                 , sepBy
                                                 )
+import           Text.Regex.TDFA
 import           Update.Nix.FetchGit
 import           Update.Nix.FetchGit.Types
 
@@ -43,7 +47,8 @@ env Options {..} =
           Normal  -> sayErr
           Quiet   -> sayErr
       updateLocations = [ (l, c) | Position l c <- location ]
-  in  Env { .. }
+      attrPatterns = attribute
+  in Env { .. }
 
 ----------------------------------------------------------------
 -- Options
@@ -52,7 +57,9 @@ env Options {..} =
 data Options w = Options
   { verbose  :: w ::: Bool <!> "False"
   , quiet    :: w ::: Bool <!> "False"
-  , location :: w ::: [Position] <?> "Source location to limit updates to"
+  , location :: w ::: [Position] <?> "Source location to limit updates to, Combined using inclusive or"
+  , attribute
+      :: w ::: [Regex] <?> "Pattern (POSIX regex) to limit updates to expressions under matching names in attrsets and let bindings. Combined using inclusing or, if this isn't specified then no expressions will be filtered by attribute name"
   }
   deriving stock Generic
 
@@ -70,7 +77,9 @@ optParser =
   versionOption
     <*> (   (,)
         <$> (unwrap <$> parseRecordWithModifiers defaultModifiers
-              { shortNameModifier = firstLetter
+              { shortNameModifier = \case
+                                      "attribute" -> Just 'A'
+                                      n           -> firstLetter n
               }
             )
         <*> many
@@ -88,7 +97,6 @@ optParser =
     (long "version" <> help ("print " <> versionString))
 
 instance ParseRecord (Options Wrapped)
-deriving instance Show (Options Unwrapped)
 
 data Position = Position Int Int
   deriving Show
@@ -101,3 +109,15 @@ instance Read Position where
 
 instance ParseField Position where
   metavar _ = "LINE:COL"
+
+instance Read Regex where
+  readsPrec _ s = case makeRegexM s of
+    Nothing -> []
+    Just r  -> [(r, "")]
+
+instance ParseField Regex where
+  metavar _ = "REGEX"
+  readField = eitherReader makeRegexM
+
+instance (e ~ String) => MonadFail (Either e) where
+  fail = Left

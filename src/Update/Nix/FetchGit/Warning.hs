@@ -4,7 +4,6 @@ module Update.Nix.FetchGit.Warning
 
 import           Data.Text
 import           Nix.Expr
-import           Data.Void
 
 data Warning = CouldNotParseInput Text
              | MissingAttr Text

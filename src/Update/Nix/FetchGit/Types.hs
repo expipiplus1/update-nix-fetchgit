@@ -11,6 +11,7 @@ import           Data.Monoid
 import           Data.Text                      ( Text )
 import           Data.Time                      ( Day )
 import           Nix.Expr                       ( NExprLoc )
+import           Text.Regex.TDFA                ( Regex )
 import           Update.Nix.FetchGit.Warning
 import           Update.Span
 
@@ -28,8 +29,9 @@ asWarnings m = unValidateT MNothing m <&> \case
   Right (MNothing, a) -> (mempty, Just a)
 
 data Env = Env
-  { sayLog :: Verbosity -> Text -> IO ()
+  { sayLog          :: Verbosity -> Text -> IO ()
   , updateLocations :: [(Int, Int)]
+  , attrPatterns    :: [Regex]
   }
 
 data Verbosity
@@ -45,7 +47,7 @@ newtype Updater = Updater
 -- parsing, but which only contains the information we care about.
 data FetchTree
   = Node { nodeVersionExpr :: Maybe NExprLoc
-         , nodeChildren    :: [FetchTree]
+         , nodeChildren    :: [(Maybe Text, FetchTree)]
          }
   | UpdaterNode Updater
 

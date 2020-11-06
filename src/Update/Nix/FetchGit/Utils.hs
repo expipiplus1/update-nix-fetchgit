@@ -7,6 +7,7 @@ module Update.Nix.FetchGit.Utils
   , prettyRepoLocation
   , quoteString
   , extractFuncName
+  , pathText
   , exprText
   , exprBool
   , exprSpan
@@ -101,6 +102,30 @@ extractFuncName (AnnE _ (NSym name)) = Just name
 extractFuncName (AnnE _ (NSelect _ (NE.last -> StaticKey name) _)) = Just name
 extractFuncName _ = Nothing
 
+pathText :: NAttrPath r -> Maybe Text
+pathText = fmap (T.concat . toList) . traverse e
+ where
+  e :: NKeyName r -> Maybe Text
+  e = \case
+    StaticKey  s              -> Just s
+    DynamicKey (Plain s)      -> t s
+    DynamicKey EscapedNewline -> Just "\n"
+    DynamicKey (Antiquoted _) -> Nothing
+  t :: NString r -> Maybe Text
+  t =
+    fmap T.concat
+      . traverse a
+      . (\case
+          DoubleQuoted as -> as
+          Indented _ as   -> as
+        )
+  a :: Antiquoted Text r -> Maybe Text
+  a = \case
+    Plain s        -> pure s
+    EscapedNewline -> pure "\n"
+    Antiquoted _   -> Nothing
+
+
 -- Takes an ISO 8601 date and returns just the day portion.
 parseISO8601DateToDay :: Text -> Either Warning Day
 parseISO8601DateToDay t =
@@ -110,7 +135,7 @@ parseISO8601DateToDay t =
             (parseTimeM False defaultTimeLocale "%Y-%m-%d" justDate)
 
 formatWarning :: Warning -> Text
-formatWarning (CouldNotParseInput doc) = tShow doc
+formatWarning (CouldNotParseInput doc) = doc
 formatWarning (MissingAttr attrName) =
   "Error: The \"" <> attrName <> "\" attribute is missing."
 formatWarning (DuplicateAttrs attrName) =
