@@ -16,7 +16,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         cabal: [latest]
-        ghc: [8.8.4, 8.10.2, 9.0.1]
+        ghc: [8.8.4, 8.10.2]
       fail-fast: false
 
     steps:
