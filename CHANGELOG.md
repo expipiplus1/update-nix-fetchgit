@@ -6,6 +6,7 @@
 
 - Implement filtering updates based on binding name
 - Better error message output on parse failure
+- Drop support for GHC 8.6
 
 ## [0.2.2] - 2020-11-03
 

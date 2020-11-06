@@ -105,7 +105,7 @@ executable update-nix-fetchgit
   default-extensions: DataKinds DefaultSignatures DeriveAnyClass DeriveDataTypeable DeriveGeneric DerivingStrategies FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses OverloadedStrings PolyKinds RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskellQuotes TupleSections TypeApplications TypeFamilies TypeOperators ViewPatterns
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base
+      base >=4.13
     , optparse-applicative
     , optparse-generic >=1.4.2
     , regex-tdfa

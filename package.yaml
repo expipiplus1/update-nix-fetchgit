@@ -29,7 +29,7 @@ executables:
     source-dirs: app
     ghc-options: -threaded -rtsopts -with-rtsopts=-N
     dependencies:
-    - base
+    - base >= 4.13
     - optparse-applicative
     - optparse-generic >= 1.4.2
     - regex-tdfa
