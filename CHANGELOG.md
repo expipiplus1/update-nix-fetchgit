@@ -2,6 +2,9 @@
 
 ## WIP
 
+- Implement filtering updates based on binding name
+- Better error message output on parse failure
+
 ## [0.2.2] - 2020-11-03
 
 - Require hnix version 0.11 with several important bugfixes

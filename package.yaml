@@ -32,6 +32,7 @@ executables:
     - base
     - optparse-applicative
     - optparse-generic >= 1.4.2
+    - regex-tdfa
     - say
     - text >= 1.2
     - update-nix-fetchgit
@@ -49,6 +50,7 @@ library:
   - monad-validate
   - mtl
   - process >= 1.2
+  - regex-tdfa
   - syb
   - template-haskell
   - text >= 1.2

@@ -60,7 +60,7 @@ runTest f =
         (System.Process.shell ("nix-store --init"))
         mempty
 
-  let env = Env (const (Data.Text.IO.hPutStrLn System.IO.stderr)) []
+  let env = Env (const (Data.Text.IO.hPutStrLn System.IO.stderr)) [] []
   Update.Nix.FetchGit.processFile env (dir </> inBase)
 
   replaceFile (dir </> inBase) (Data.Text.pack dir) "/tmp/nix-update-fetchgit-test"
