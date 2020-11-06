@@ -1,5 +1,5 @@
 name: update-nix-fetchgit
-version: "0.2.2"
+version: "0.2.3"
 synopsis: A program to update fetchgit values in Nix expressions
 description: |
   This command-line utility is meant to be used by people maintaining Nix
