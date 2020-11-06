@@ -4,8 +4,6 @@ module Main
   ( main
   ) where
 
-import           Control.Category               ( (>>>) )
-import           Data.Either                    ( partitionEithers )
 import           Data.Foldable
 import qualified Data.Text.IO                  as T
 import           Data.Version                   ( showVersion )
@@ -79,7 +77,9 @@ optParser =
   versionOption
     <*> (   (,)
         <$> (unwrap <$> parseRecordWithModifiers defaultModifiers
-              { shortNameModifier = firstLetter
+              { shortNameModifier = \case
+                                      "attribute" -> Just 'A'
+                                      n           -> firstLetter n
               }
             )
         <*> many
