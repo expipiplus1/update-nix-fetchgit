@@ -3,11 +3,7 @@
 with pkgs.haskell.lib;
 
 let
-  drv = import ./default.nix {
-    inherit pkgs compiler;
-    hoogle = false;
-    forShell = false;
-  };
+  drv = import ./default.nix { inherit pkgs compiler; };
 
   docDrv = drv:
     (overrideCabal drv (drv: {
