@@ -3,21 +3,27 @@
 with pkgs.haskell.lib;
 
 let
-  drv = import ./default.nix {
-    inherit pkgs compiler;
-    hoogle = false;
-    forShell = false;
-  };
+  drv = import ./default.nix { inherit pkgs compiler; };
 
-  docDrv = drv:
-    (overrideCabal drv (drv: {
-      doHaddock = true;
-      haddockFlags = [ "--for-hackage" ];
-      postHaddock = ''
-        mkdir -p "$doc"
-        tar --format=ustar -czf "$doc/${drv.pname}-${drv.version}-docs.tar.gz" -C dist/doc/html "${drv.pname}-${drv.version}-docs"
+  docDrv = pkg:
+    pkgs.lib.overrideDerivation pkg (drv: {
+      name = "${drv.name}-docs";
+      outputs = [ "out" ];
+      buildPhase = ''
+        runHook preHaddock
+        ./Setup haddock --for-hackage
+        runHook postHaddock
       '';
-    })).doc;
+      checkPhase = ":";
+      installPhase = ''
+        runHook preInstall
+        mkdir -p "$out"
+        tar --format=ustar \
+          -czf "$out/${drv.pname}-${drv.version}-docs.tar.gz" \
+          -C dist/doc/html "${drv.pname}-${drv.version}-docs"
+        runHook postInstall
+      '';
+    });
 
 in {
   tarball = sdistTarball drv;
