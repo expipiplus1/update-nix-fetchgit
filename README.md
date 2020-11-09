@@ -41,8 +41,8 @@ write to `stdin` and `stdout` (useful as a filter in an editor).
 
 It will update fetchers anywhere in the files, note that it is a purely
 syntactic match so complicated invocations of the fetchers may not be picked
-up; see <./src/Update/Nix/Updater.hs> to look at the shapes of Nix expressions
-which are matched.
+up; see [./src/Update/Nix/Updater.hs](./src/Update/Nix/Updater) to look at the
+shapes of Nix expressions which are matched.
 
 Please open an issue if `update-nix-fetchgit` doesn't recognize a fetcher and
 you think it could.
