@@ -26,7 +26,10 @@ Additionally if the `rev` (for git fetches) or `url` attribute has a comment:
 - `pin`: the revision or URL will not be updated, only the hash will be
   changed
 - Anything else: the `rev` or `url` parameter will be updated to point to the
-  revision pointed to by the branch or tag named in the comment.
+  revision pointed to by the branch or tag named in the comment. This is in the
+  format expected by `git ls-remote` so if the expression has `rev = _; #
+  tags/v*` it will be updated to the latest tag beginning with `v`, sorted by
+  version.
 
 ## Usage
 
@@ -43,6 +46,11 @@ It will update fetchers anywhere in the files, note that it is a purely
 syntactic match so complicated invocations of the fetchers may not be picked
 up; see [./src/Update/Nix/Updater.hs](./src/Update/Nix/Updater) to look at the
 shapes of Nix expressions which are matched.
+
+If you pass `--only-commented` only expressions which have a comment on the
+`rev` or `url` attribute will be updated. This can be useful for updating files
+en-mass with some control over which expressions are modified with a command
+like: `fd .nix --exec update-nix-fetchgit --only-commented`
 
 Please open an issue if `update-nix-fetchgit` doesn't recognize a fetcher and
 you think it could.

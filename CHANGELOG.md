@@ -2,6 +2,15 @@
 
 ## WIP
 
+## [0.2.4] - 2020-11-11
+
+- Add --dry-run option
+- Sort tags with git ls-remote with `-v:refname` (according to version)
+  - this allows one to have a comment like `# tags/v*` to get the latest
+    version
+- Add --only-commented option to allow being a bit more explicit about what's
+  updated
+
 ## [0.2.3] - 2020-11-06
 
 - Implement filtering updates based on binding name

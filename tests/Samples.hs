@@ -17,9 +17,11 @@ import qualified System.IO
 import qualified System.IO.Temp
 import qualified System.Process
 
+import           Data.Text.IO                   ( hPutStrLn )
 import qualified Update.Nix.FetchGit
-import           Update.Nix.FetchGit.Types (Env(Env))
-import Data.Text.IO (hPutStrLn)
+import           Update.Nix.FetchGit.Types      ( Dryness(..)
+                                                , Env(Env)
+                                                )
 
 -- | Provided output file @f@ pointing to e.g. @tests/test_rec_sets.out.nix@
 -- * turn this into @tests/test_rec_sets.in.nix@
@@ -60,7 +62,7 @@ runTest f =
         (System.Process.shell ("nix-store --init"))
         mempty
 
-  let env = Env (const (Data.Text.IO.hPutStrLn System.IO.stderr)) [] []
+  let env = Env (const (Data.Text.IO.hPutStrLn System.IO.stderr)) [] [] Wet False
   Update.Nix.FetchGit.processFile env (dir </> inBase)
 
   replaceFile (dir </> inBase) (Data.Text.pack dir) "/tmp/nix-update-fetchgit-test"

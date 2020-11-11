@@ -7,7 +7,7 @@ let
     if compiler == null then haskellPackages else haskell.packages.${compiler};
 
 in hp.developPackage {
-  name = "";
+  name = "update-nix-fetchgit";
   root = nix-gitignore.gitignoreSource [ ] ./.;
   overrides = self: _super: {
     optparse-generic = self.optparse-generic_1_4_4;
