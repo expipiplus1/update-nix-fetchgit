@@ -81,7 +81,7 @@ findUpdates getComment e = do
     then pure $ Node Nothing []
     else
       let
-        updaters     = ($ e) <$> fetchers getComment
+        updaters     = ($ e) <$> fetchers onlyCommented getComment
         bindingTrees = \case
           NamedVar p e' _ | Just t <- pathText p ->
             (: []) . (Just t, ) <$> findUpdates getComment e'

@@ -33,6 +33,7 @@ data Env = Env
   , updateLocations :: [(Int, Int)]
   , attrPatterns    :: [Regex]
   , dryness         :: Dryness
+  , onlyCommented   :: Bool
   }
 
 -- | Is this a dry run or not

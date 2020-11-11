@@ -24,11 +24,14 @@ import           Update.Nix.FetchGit.Types
 import           Update.Nix.FetchGit.Utils
 import           Update.Span
 
-type Fetcher = (NExprLoc -> Maybe Comment) -> NExprLoc -> Maybe (M Updater)
+type Fetcher
+  = Bool -> (NExprLoc -> Maybe Comment) -> NExprLoc -> Maybe (M Updater)
 
-fetchers :: (NExprLoc -> Maybe Comment) -> [NExprLoc -> Maybe (M Updater)]
-fetchers getComment =
+fetchers
+  :: Bool -> (NExprLoc -> Maybe Comment) -> [NExprLoc -> Maybe (M Updater)]
+fetchers onlyCommented getComment =
   ($ getComment)
+    .   ($ onlyCommented)
     <$> [ fetchgitUpdater
         , builtinsFetchGitUpdater
         , fetchTarballGithubUpdater
@@ -38,7 +41,7 @@ fetchers getComment =
         ]
 
 fetchgitUpdater :: Fetcher
-fetchgitUpdater getComment = \case
+fetchgitUpdater onlyCommented getComment = \case
   [matchNixLoc|
     ^fetcher {
       url = ^url;
@@ -48,9 +51,10 @@ fetchgitUpdater getComment = \case
       _leaveDotGit = ^leaveDotGit;
       _fetchSubmodules = ^fetchSubmodules;
     }|] | extractFuncName fetcher `elem` [Just "fetchgit", Just "fetchgitPrivate"]
+        , desiredRev <- commentToRequest (getComment rev)
+        , onlyCommented ~> isJust desiredRev
     -> Just $ do
       url' <- fromEither $ URL <$> exprText url
-      let desiredRev = commentToRequest (getComment rev)
       deepClone' <- fmap (fromMaybe False) . fromEither . traverse exprBool $ deepClone
       leaveDotGit' <- fmap (fromMaybe deepClone') . fromEither . traverse exprBool $ leaveDotGit
       fetchSubmodules' <- fmap (fromMaybe True) . fromEither . traverse exprBool $ fetchSubmodules
@@ -58,22 +62,23 @@ fetchgitUpdater getComment = \case
   _ -> Nothing
 
 builtinsFetchGitUpdater :: Fetcher
-builtinsFetchGitUpdater getComment = \case
+builtinsFetchGitUpdater onlyCommented getComment = \case
   [matchNixLoc|
     ^fetcher {
       url = ^url;
       rev = ^rev; # rev
       _submodules = ^submodules;
     }|] | Just "fetchGit" <- extractFuncName fetcher
+        , desiredRev <- commentToRequest (getComment rev)
+        , onlyCommented ~> isJust desiredRev
     -> Just $ do
       url' <- fromEither $ URL <$> exprText url
-      let desiredRev = commentToRequest (getComment rev)
       submodules' <- fmap (fromMaybe False) . fromEither . traverse exprBool $ submodules
       pure $ gitUpdater url' desiredRev False False submodules' rev Nothing
   _ -> Nothing
 
 fetchTarballGithubUpdater :: Fetcher
-fetchTarballGithubUpdater getComment = \case
+fetchTarballGithubUpdater onlyCommented getComment = \case
   [matchNixLoc|
     ^fetcher {
       url = ^url; # rev
@@ -85,6 +90,7 @@ fetchTarballGithubUpdater getComment = \case
       "/"
       url'
     , comment <- getComment url
+    , onlyCommented ~> isJust comment
     , comment /= Just "pin" -- Fall back to the regular tarball updater if we've been instructed to not change this URL
     -> Just $ do
       let rev = Revision $ fromMaybe "HEAD" comment
@@ -99,19 +105,21 @@ fetchTarballGithubUpdater getComment = \case
   _ -> Nothing
 
 builtinsFetchTarballUpdater :: Fetcher
-builtinsFetchTarballUpdater _ = \case
+builtinsFetchTarballUpdater onlyCommented getComment = \case
   [matchNixLoc|
     ^fetcher {
-      url = ^url;
+      url = ^url; # [pin]
       sha256 = ^sha256;
     }|] | Just "fetchTarball" <- extractFuncName fetcher
+        , comment <- getComment url
+        , onlyCommented ~> isJust comment
     -> Just $ do
       url' <- fromEither $ exprText url
       pure $ tarballUpdater url' sha256
   _ -> Nothing
 
 fetchGitHubUpdater :: Fetcher
-fetchGitHubUpdater getComment = \case
+fetchGitHubUpdater onlyCommented getComment = \case
   [matchNixLoc|
     ^fetcher {
       owner = ^owner;
@@ -123,10 +131,11 @@ fetchGitHubUpdater getComment = \case
                         "fetchFromGitHub" -> Just GitHub
                         "fetchFromGitLab" -> Just GitLab
                         _ -> Nothing
+        , desiredRev <- commentToRequest (getComment rev)
+        , onlyCommented ~> isJust desiredRev
     -> Just $ do
       owner' <- fromEither $ exprText owner
       repo' <- fromEither $ exprText repo
-      let desiredRev = commentToRequest (getComment rev)
       fetchSubmodules' <- fmap (fromMaybe False) . fromEither . traverse exprBool $ fetchSubmodules
       pure $ gitUpdater (fun owner' repo') desiredRev False False fetchSubmodules' rev (Just sha256)
   _ -> Nothing
@@ -141,7 +150,7 @@ fetchGitHubUpdater getComment = \case
 --      });
 -- @
 hackageDirectUpdater :: Fetcher
-hackageDirectUpdater _ = \case
+hackageDirectUpdater onlyCommented _ = \case
   [matchNixLoc|
     ^fetcher {
       pkg = ^pkg;
@@ -149,6 +158,7 @@ hackageDirectUpdater _ = \case
       sha256 = ^sha256;
     }
   |] | Just "callHackageDirect" <- extractFuncName fetcher
+     , not onlyCommented -- no comments on this one
      -> Just $ do
       pkg' <- fromEither $ exprText pkg
       ver' <- fromEither $ exprText ver
@@ -223,3 +233,6 @@ tarballUpdater url sha256Expr = Updater $ do
   logVerbose $ "Updating " <> url
   sha256 <- nixPrefetchUrl [] url
   pure (Nothing, [SpanUpdate (exprSpan sha256Expr) (quoteString sha256)])
+
+(~>) :: Bool -> Bool -> Bool
+x ~> y = not x || y
