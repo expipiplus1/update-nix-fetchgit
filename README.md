@@ -26,7 +26,10 @@ Additionally if the `rev` (for git fetches) or `url` attribute has a comment:
 - `pin`: the revision or URL will not be updated, only the hash will be
   changed
 - Anything else: the `rev` or `url` parameter will be updated to point to the
-  revision pointed to by the branch or tag named in the comment.
+  revision pointed to by the branch or tag named in the comment. This is in the
+  format expected by `git ls-remote` so if the expression has `rev = _; #
+  tags/v*` it will be updated to the latest tag beginning with `v`, sorted by
+  version.
 
 ## Usage
 

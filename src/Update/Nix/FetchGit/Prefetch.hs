@@ -1,4 +1,3 @@
-
 module Update.Nix.FetchGit.Prefetch
   ( NixPrefetchGitOutput(..)
   , nixPrefetchGit
@@ -31,11 +30,12 @@ import           Update.Nix.FetchGit.Warning
 
 
 -- | The type of nix-prefetch-git's output
-data NixPrefetchGitOutput = NixPrefetchGitOutput{ url    :: Text
-                                                , rev    :: Text
-                                                , sha256 :: Text
-                                                , date   :: Text
-                                                }
+data NixPrefetchGitOutput = NixPrefetchGitOutput
+  { url    :: Text
+  , rev    :: Text
+  , sha256 :: Text
+  , date   :: Text
+  }
   deriving (Show, Generic, FromJSON)
 
 -- | Run nix-prefetch-git
@@ -86,10 +86,9 @@ getGitFullName
   -> M Text
   -- ^ Full name, i.e. with refs/heads/ or refs/tags/
 getGitFullName repo revision = do
-  (stdoutText, rs) <- gitLsRemotes repo revision
-  case rs of
-    [_hash, name] : _ -> pure name
-    _                 -> refute1 $ InvalidGitLsRemoteOutput stdoutText
+  gitLsRemotes repo revision >>= \case
+    Just (_hash, name) -> pure name
+    Nothing            -> refute1 $ NoSuchRef (unRevision revision)
 
 -- | Return a tag or a hash
 getGitRevision
@@ -98,27 +97,31 @@ getGitRevision
   -> Revision
   -- ^ branch or tag name
   -> M Text
-  -- ^ Full name, i.e. with refs/heads/ or refs/tags/
 getGitRevision repo revision = do
-  (stdoutText, rs) <- gitLsRemotes repo revision
-  case rs of
-    [hash, name] : _ | Just tag <- stripPrefix "refs/tags/" name -> pure tag
-                     | otherwise -> pure hash
-    _ -> refute1 $ InvalidGitLsRemoteOutput stdoutText
+  gitLsRemotes repo revision >>= \case
+    Just (hash, name) | Just tag <- stripPrefix "refs/tags/" name -> pure tag
+                      | otherwise -> pure hash
+    Nothing -> refute1 $ NoSuchRef (unRevision revision)
 
-gitLsRemotes :: Text -> Revision -> M (Text, [[Text]])
+-- | Run git ls-remote --sort=-v:refname and return the first match if any
+gitLsRemotes :: Text -> Revision -> M (Maybe (Text, Text))
 gitLsRemotes repo revision = do
   (exitCode, nsStdout, nsStderr) <- liftIO $ readProcessWithExitCode
     "git"
-    ["ls-remote", T.unpack repo, T.unpack (unRevision revision)]
+    [ "ls-remote"
+    , "--sort=-v:refname"
+    , T.unpack repo
+    , T.unpack (unRevision revision)
+    ]
     ""
   case exitCode of
     ExitFailure e -> refute1 (NixPrefetchGitFailed e (pack nsStderr))
     ExitSuccess   -> pure ()
   let stdoutText = T.pack nsStdout
   case fmap T.words . T.lines $ stdoutText of
-    [] -> refute1 (NoSuchRef (unRevision revision))
-    rs -> pure (stdoutText, rs)
+    []               -> pure Nothing
+    [hash, name] : _ -> pure $ Just (hash, name)
+    _                -> refute1 (InvalidGitLsRemoteOutput stdoutText)
 
 getGitHubRevisionDate :: Text -> Text -> Revision -> M Day
 getGitHubRevisionDate owner repo revision = do
@@ -156,6 +159,5 @@ parseSHA256 t = do
   base32Length   = (sha256HashSize * 8 - 1) `quot` 5 + 1
 
 stripPrefix :: Text -> Text -> Maybe Text
-stripPrefix p t = if p `T.isPrefixOf` t
-                    then Just $ T.drop (T.length p) t
-                    else Nothing
+stripPrefix p t =
+  if p `T.isPrefixOf` t then Just $ T.drop (T.length p) t else Nothing

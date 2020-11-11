@@ -3,6 +3,9 @@
 ## WIP
 
 - Add --dry-run option
+- Sort tags with git ls-remote with `-v:refname` (according to version)
+  - this allows one to have a comment like `# tags/v*` to get the latest
+    version
 
 ## [0.2.3] - 2020-11-06
 
