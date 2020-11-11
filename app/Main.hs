@@ -4,6 +4,7 @@ module Main
   ( main
   ) where
 
+import           Data.Bool
 import           Data.Foldable
 import qualified Data.Text.IO                  as T
 import           Data.Version                   ( showVersion )
@@ -47,19 +48,22 @@ env Options {..} =
           Normal  -> sayErr
           Quiet   -> sayErr
       updateLocations = [ (l, c) | Position l c <- location ]
-      attrPatterns = attribute
-  in Env { .. }
+      attrPatterns    = attribute
+      dryness         = bool Wet Dry dryRun
+  in  Env { .. }
 
 ----------------------------------------------------------------
 -- Options
 ----------------------------------------------------------------
 
 data Options w = Options
-  { verbose  :: w ::: Bool <!> "False"
-  , quiet    :: w ::: Bool <!> "False"
-  , location :: w ::: [Position] <?> "Source location to limit updates to, Combined using inclusive or"
+  { verbose :: w ::: Bool <!> "False"
+  , quiet   :: w ::: Bool <!> "False"
+  , location
+      :: w ::: [Position] <?> "Source location to limit updates to, Combined using inclusive or"
   , attribute
       :: w ::: [Regex] <?> "Pattern (POSIX regex) to limit updates to expressions under matching names in attrsets and let bindings. Combined using inclusing or, if this isn't specified then no expressions will be filtered by attribute name"
+  , dryRun :: w ::: Bool <!> "False" <?> "Don't modify the file"
   }
   deriving stock Generic
 
@@ -80,6 +84,9 @@ optParser =
               { shortNameModifier = \case
                                       "attribute" -> Just 'A'
                                       n           -> firstLetter n
+              , fieldNameModifier = \case
+                                      "dryRun" -> "dry-run"
+                                      n        -> n
               }
             )
         <*> many

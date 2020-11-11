@@ -2,6 +2,8 @@
 
 ## WIP
 
+- Add --dry-run option
+
 ## [0.2.3] - 2020-11-06
 
 - Implement filtering updates based on binding name

@@ -32,7 +32,11 @@ data Env = Env
   { sayLog          :: Verbosity -> Text -> IO ()
   , updateLocations :: [(Int, Int)]
   , attrPatterns    :: [Regex]
+  , dryness         :: Dryness
   }
+
+-- | Is this a dry run or not
+data Dryness = Dry | Wet
 
 data Verbosity
   = Verbose

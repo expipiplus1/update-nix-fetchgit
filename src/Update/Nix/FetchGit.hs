@@ -46,7 +46,9 @@ processText :: Env -> Text -> IO Text
 processText env t = do
   (es, t') <- runM env (updatesFromText t <&> (`updateSpans` t))
   traverse_ (sayLog env Normal . formatWarning) es
-  maybe exitFailure pure t'
+  maybe exitFailure pure $ case dryness env of
+    Wet -> t'
+    Dry -> Just t
 
 -- | Given the path to a Nix file, returns the SpanUpdates
 -- all the parts of the file we want to update.
@@ -127,6 +129,7 @@ evalUpdates = fmap snd . go
   go = \case
     UpdaterNode (Updater u) -> u
     Node versionExpr cs     -> do
+      -- Run over all children
       (ds, ss) <- unzip . catMaybes <$> traverse (tolerate . go . snd) cs
       -- Update version string with the maximum of versions in the children
       let latestDate = maximumMay (catMaybes ds)
