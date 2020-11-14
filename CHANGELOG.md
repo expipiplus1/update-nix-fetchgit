@@ -2,6 +2,9 @@
 
 ## WIP
 
+- Pass `--heads --tags` to `git ls-remote` to avoid fetching remote
+  refs. Don't pass when the revision begins with `refs`
+
 ## [0.2.4] - 2020-11-11
 
 - Add --dry-run option

@@ -103,16 +103,23 @@ getGitRevision repo revision = do
                       | otherwise -> pure hash
     Nothing -> refute1 $ NoSuchRef (unRevision revision)
 
--- | Run git ls-remote --sort=-v:refname and return the first match if any
+-- | Run git ls-remote --heads --tags --sort=-v:refname and return the first
+-- match if any. Use '--heads --tags' if the revision doesn't start with
+-- 'refs/' to avoid getting 'remote' refs.
 gitLsRemotes :: Text -> Revision -> M (Maybe (Text, Text))
 gitLsRemotes repo revision = do
+  let headsTags = if T.isPrefixOf "refs/" (unRevision revision)
+        then []
+        else ["--heads", "--tags"]
   (exitCode, nsStdout, nsStderr) <- liftIO $ readProcessWithExitCode
     "git"
-    [ "ls-remote"
-    , "--sort=-v:refname"
-    , T.unpack repo
-    , T.unpack (unRevision revision)
-    ]
+    (  [ "ls-remote"
+       , "--sort=-v:refname"
+       , T.unpack repo
+       , T.unpack (unRevision revision)
+       ]
+    <> headsTags
+    )
     ""
   case exitCode of
     ExitFailure e -> refute1 (NixPrefetchGitFailed e (pack nsStderr))
