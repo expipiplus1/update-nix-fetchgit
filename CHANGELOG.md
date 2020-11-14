@@ -2,6 +2,8 @@
 
 ## WIP
 
+## [0.2.5] - 2020-11-14
+
 - Pass `--heads --tags` to `git ls-remote` to avoid fetching remote
   refs. Don't pass when the revision begins with `refs`
 
