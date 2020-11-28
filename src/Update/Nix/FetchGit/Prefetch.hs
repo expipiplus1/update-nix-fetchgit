@@ -111,16 +111,12 @@ gitLsRemotes repo revision = do
   let headsTags = if T.isPrefixOf "refs/" (unRevision revision)
         then []
         else ["--heads", "--tags"]
-  (exitCode, nsStdout, nsStderr) <- liftIO $ readProcessWithExitCode
-    "git"
-    (  [ "ls-remote"
-       , "--sort=-v:refname"
-       , T.unpack repo
-       , T.unpack (unRevision revision)
-       ]
-    <> headsTags
-    )
-    ""
+      args =
+        ["ls-remote", "--sort=-v:refname", repo, unRevision revision]
+          <> headsTags :: [Text]
+  logVerbose $ "Calling: git " <> T.unwords args
+  (exitCode, nsStdout, nsStderr) <- liftIO
+    $ readProcessWithExitCode "git" (T.unpack <$> args) ""
   case exitCode of
     ExitFailure e -> refute1 (NixPrefetchGitFailed e (pack nsStderr))
     ExitSuccess   -> pure ()
