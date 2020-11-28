@@ -1,4 +1,4 @@
-{ pkgs ? import ./nixpkgs.nix, compiler ? null }:
+{ pkgs ? import ./nixpkgs.nix, compiler ? null, forShell ? pkgs.lib.inNixShell }:
 
 with pkgs;
 
@@ -14,5 +14,6 @@ in hp.developPackage {
     optparse-applicative = self.optparse-applicative_0_16_0_0;
   };
   modifier = drv: haskell.lib.addBuildTools drv [ git nix nix-prefetch-git ];
+  returnShellEnv = forShell;
 }
 
