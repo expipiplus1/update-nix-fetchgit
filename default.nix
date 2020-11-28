@@ -1,4 +1,4 @@
-{ pkgs ? import ./nixpkgs.nix, compiler ? null }:
+{ pkgs ? import ./nixpkgs.nix, compiler ? null, forShell ? pkgs.lib.inNixShell }:
 
 with pkgs;
 
@@ -12,5 +12,6 @@ in hp.developPackage {
   overrides = self: _super: {
   };
   modifier = drv: haskell.lib.addBuildTools drv [ git nix nix-prefetch-git ];
+  returnShellEnv = forShell;
 }
 
