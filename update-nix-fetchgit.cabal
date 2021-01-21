@@ -126,13 +126,14 @@ test-suite update-nix-fetchgit-samples
       tests
   default-extensions: DataKinds DefaultSignatures DeriveAnyClass DeriveDataTypeable DeriveGeneric DerivingStrategies FlexibleContexts FlexibleInstances GADTs LambdaCase MultiParamTypeClasses OverloadedStrings PolyKinds RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TemplateHaskellQuotes TupleSections TypeApplications TypeFamilies TypeOperators ViewPatterns
   ghc-options: -Wall
+  build-tool-depends:
+    tasty-discover:tasty-discover
   build-depends:
       base >=4.7 && <5
     , directory
     , filepath
     , process
     , tasty
-    , tasty-discover
     , tasty-golden >=2.3
     , temporary
     , text
