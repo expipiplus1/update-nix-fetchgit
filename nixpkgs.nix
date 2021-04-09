@@ -1,8 +1,8 @@
 let
   nixpkgsSrc = builtins.fetchTarball {
     url =
-      "https://github.com/NixOS/nixpkgs/archive/3561ed6953f96e2178142b04413d200be94e281d.tar.gz"; # master
-    sha256 = "1lsg2dw4ifilywis3638023h4c8b073k2v56qzqqkhl7jkaiphbk";
+      "https://github.com/NixOS/nixpkgs/archive/4795e7f3a9cebe277bb4b5920caa8f0a2c313eb0.tar.gz"; # master
+    sha256 = "03xqwcli1cw96x5d21siq9ph9g37igp35fv9rgsl3wv4gvm8y48c";
   };
 
 in import nixpkgsSrc { }
