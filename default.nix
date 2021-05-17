@@ -1,4 +1,5 @@
-{ pkgs ? import ./nixpkgs.nix, compiler ? null, forShell ? pkgs.lib.inNixShell }:
+{ pkgs ? import ./nixpkgs.nix, compiler ? null, forShell ? pkgs.lib.inNixShell
+}:
 
 with pkgs;
 
@@ -9,8 +10,7 @@ let
 in hp.developPackage {
   name = "update-nix-fetchgit";
   root = nix-gitignore.gitignoreSource [ ] ./.;
-  overrides = self: _super: {
-  };
+  overrides = self: _super: { };
   modifier = drv: haskell.lib.addBuildTools drv [ git nix nix-prefetch-git ];
   returnShellEnv = forShell;
 }
