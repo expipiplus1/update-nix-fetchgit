@@ -36,6 +36,7 @@ fetchers onlyCommented getComment =
         , builtinsFetchGitUpdater
         , fetchTarballGithubUpdater
         , builtinsFetchTarballUpdater
+        , fetchurlUpdater
         , fetchGitHubUpdater
         , hackageDirectUpdater
         ]
@@ -116,6 +117,20 @@ builtinsFetchTarballUpdater onlyCommented getComment = \case
     -> Just $ do
       url' <- fromEither $ exprText url
       pure $ tarballUpdater url' sha256
+  _ -> Nothing
+
+fetchurlUpdater :: Fetcher
+fetchurlUpdater onlyCommented getComment = \case
+  [matchNixLoc|
+    ^fetcher {
+      url = ^url; # [pin]
+      sha256 = ^sha256;
+    }|] | Just "fetchurl" <- extractFuncName fetcher
+        , comment <- getComment url
+        , onlyCommented ~> isJust comment
+    -> Just $ do
+      url' <- fromEither $ exprText url
+      pure $ urlUpdater url' sha256
   _ -> Nothing
 
 fetchGitHubUpdater :: Fetcher
@@ -230,6 +245,17 @@ tarballUpdater
   -- ^ sha256
   -> Updater
 tarballUpdater url sha256Expr = Updater $ do
+  logVerbose $ "Updating " <> url
+  sha256 <- nixPrefetchUrl ["--unpack"] url
+  pure (Nothing, [SpanUpdate (exprSpan sha256Expr) (quoteString sha256)])
+
+urlUpdater
+  :: Text
+  -- ^ URL
+  -> NExprLoc
+  -- ^ sha256
+  -> Updater
+urlUpdater url sha256Expr = Updater $ do
   logVerbose $ "Updating " <> url
   sha256 <- nixPrefetchUrl [] url
   pure (Nothing, [SpanUpdate (exprSpan sha256Expr) (quoteString sha256)])

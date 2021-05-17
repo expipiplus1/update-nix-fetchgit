@@ -53,7 +53,7 @@ nixPrefetchGit extraArgs prefetchURL = do
     ExitSuccess   -> pure ()
   note (InvalidPrefetchGitOutput (pack nsStdout)) (decode (fromString nsStdout))
 
--- | Run nix-prefetch-url --unpack
+-- | Run nix-prefetch-url
 nixPrefetchUrl
   :: [Text] -- ^ Extra arguments for nix-prefetch-url
   -> Text   -- ^ The URL to prefetch
@@ -61,7 +61,7 @@ nixPrefetchUrl
 nixPrefetchUrl extraArgs prefetchURL = do
   (exitCode, nsStdout, nsStderr) <- liftIO $ readProcessWithExitCode
     "nix-prefetch-url"
-    ("--unpack" : map unpack extraArgs ++ [unpack prefetchURL])
+    (map unpack extraArgs ++ [unpack prefetchURL])
     ""
   case exitCode of
     ExitFailure e -> refute1 (NixPrefetchUrlFailed e (pack nsStderr))
