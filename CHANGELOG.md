@@ -2,6 +2,9 @@
 
 ## WIP
 
+- `git ls-remote` calls are printed in verbose mode
+- Small packaging changes
+
 ## [0.2.5] - 2020-11-14
 
 - Pass `--heads --tags` to `git ls-remote` to avoid fetching remote
