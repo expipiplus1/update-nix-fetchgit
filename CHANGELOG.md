@@ -2,6 +2,8 @@
 
 ## WIP
 
+## [0.2.6] - 2021-05-17
+
 - `git ls-remote` calls are printed in verbose mode
 - Small packaging changes
 
