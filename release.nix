@@ -1,32 +1,11 @@
-{ pkgs ? import ./nixpkgs.nix, compiler ? "ghc884" }:
+{ pkgs ? import ./nixpkgs.nix, compiler ? null }:
 
 with pkgs.haskell.lib;
 
-let
-  drv = import ./default.nix { inherit pkgs compiler; };
-
-  docDrv = pkg:
-    pkgs.lib.overrideDerivation pkg (drv: {
-      name = "${drv.name}-docs";
-      outputs = [ "out" ];
-      buildPhase = ''
-        runHook preHaddock
-        ./Setup haddock --for-hackage
-        runHook postHaddock
-      '';
-      checkPhase = ":";
-      installPhase = ''
-        runHook preInstall
-        mkdir -p "$out"
-        tar --format=ustar \
-          -czf "$out/${drv.pname}-${drv.version}-docs.tar.gz" \
-          -C dist/doc/html "${drv.pname}-${drv.version}-docs"
-        runHook postInstall
-      '';
-    });
+let drv = import ./default.nix { inherit pkgs compiler; };
 
 in {
   tarball = sdistTarball drv;
-  docs = docDrv drv;
+  docs = documentationTarball drv;
   sdistTest = buildFromSdist drv;
 }
