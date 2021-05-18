@@ -18,6 +18,7 @@ The following fetchers are supported:
 - `builtins.fetchTarball` (Only updates the url when this is a archive fetch
   from GitHub)
 - `pkgs.haskellPackages.callHackageDirect` (Only updates the hash)
+- `fetchurl` (Only updates the hash)
 
 The options `deepClone`, `leaveDotGit`, `fetchSubmodules` are also supported.
 

@@ -19,7 +19,7 @@ with pkgs;
   srcDeep = fetchgit {
     url = "/tmp/nix-update-fetchgit-test/repo1";
     rev = "1c60ae07b5740aab02e32b4f64600f002112e6fd";
-    sha256 = "0xnazgn7p7xspda2wsfk1v1xrw9z5vvban0nhwd7xd3f70223gzz";
+    sha256 = "1qw5y2n4a7i7f9mscqf4xwyxg5bn5cbrha797kdc7fcgjnhp5dy7";
     deepClone = true;
   };
 }
