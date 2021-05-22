@@ -1,0 +1,82 @@
+diff --git a/src/Nix/Parser.hs b/src/Nix/Parser.hs
+index 0a820b8..7e0a4d2 100644
+--- a/src/Nix/Parser.hs
++++ b/src/Nix/Parser.hs
+@@ -609,9 +609,10 @@ annotateLocation :: Parser a -> Parser (Ann SrcSpan a)
+ annotateLocation p =
+   do
+     begin <- getSourcePos
++    res <- p
+     end   <- get -- The state set before the last whitespace
+ 
+-    Ann (SrcSpan begin end) <$> p
++    pure $ Ann (SrcSpan begin end) res
+ 
+ annotateLocation1 :: Parser (NExprF NExprLoc) -> Parser NExprLoc
+ annotateLocation1 = fmap annToAnnF . annotateLocation
+diff --git a/tests/ParserTests.hs b/tests/ParserTests.hs
+index 0b50cf6..5720999 100644
+--- a/tests/ParserTests.hs
++++ b/tests/ParserTests.hs
+@@ -357,6 +357,42 @@ in null|] [text|let
+         in (matcher.case or null).foo (v.case);
+ in null|]
+ 
++case_simpleLoc =
++  let
++    mkSPos l c = SourcePos "<string>" (mkPos l) (mkPos c)
++    mkSpan l1 c1 l2 c2 = SrcSpan (mkSPos l1 c1) (mkSPos l2 c2)
++  in
++    assertParseTextLoc [text|let
++    foo = bar
++         baz "qux";
++    in foo
++    |]
++    (Fix
++      (NLet_
++        (mkSpan 1 1 4 7)
++        [ NamedVar
++            (StaticKey "foo" :| [])
++            (Fix
++              (NBinary_
++                (mkSpan 2 7 3 15)
++                NApp
++                (Fix
++                  (NBinary_ (mkSpan 2 7 3 9)
++                            NApp
++                            (Fix (NSym_ (mkSpan 2 7 2 10) "bar"))
++                            (Fix (NSym_ (mkSpan 3 6 3 9) "baz"))
++                  )
++                )
++                (Fix (NStr_ (mkSpan 3 10 3 15) (DoubleQuoted [Plain "qux"])))
++              )
++            )
++            (mkSPos 2 1)
++        ]
++        (Fix (NSym_ (mkSpan 4 4 4 7) "foo"))
++      )
++    )
++
++
+ tests :: TestTree
+ tests = $testGroupGenerator
+ 
+@@ -375,6 +411,18 @@ assertParseText str expected =
+     )
+     (parseNixText str)
+ 
++assertParseTextLoc :: Text -> NExprLoc -> Assertion
++assertParseTextLoc str expected =
++  either
++    (\ err ->
++      assertFailure $ toString $ "Unexpected fail parsing `" <> str <> "':\n" <> show err
++    )
++    (assertEqual
++      ("When parsing " <> toString str)
++      expected
++    )
++    (parseNixTextLoc str)
++
+ assertParseFile :: FilePath -> NExpr -> Assertion
+ assertParseFile file expected =
+   do

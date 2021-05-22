@@ -38,7 +38,7 @@ import           Data.Time                      ( Day
                                                 )
 import           Nix.Atoms                      ( NAtom(NBool) )
 import           Nix.Expr                hiding ( SourcePos )
-import           Nix.Parser                     ( Result(..)
+import           Nix.Parser                     ( Result
                                                 , parseNixFileLoc
                                                 , parseNixTextLoc
                                                 )

@@ -10,7 +10,9 @@ let
 in hp.developPackage {
   name = "update-nix-fetchgit";
   root = nix-gitignore.gitignoreSource [ ] ./.;
-  overrides = self: _super: { };
+  overrides = self: super: {
+    hnix = pkgs.haskell.lib.appendPatch super.hnix ./hnix.patch;
+  };
   modifier = drv: haskell.lib.addBuildTools drv [ git nix nix-prefetch-git ];
   returnShellEnv = forShell;
 }

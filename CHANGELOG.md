@@ -2,6 +2,8 @@
 
 ## WIP
 
+- `hnix-0.13` support
+
 ## [0.2.6] - 2021-05-17
 
 - `git ls-remote` calls are printed in verbose mode
