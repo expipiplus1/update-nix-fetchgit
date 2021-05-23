@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           update-nix-fetchgit
-version:        0.2.6
+version:        0.2.7
 synopsis:       A program to update fetchgit values in Nix expressions
 description:    This command-line utility is meant to be used by people maintaining Nix
                 expressions that fetch files from Git repositories. It automates the process
@@ -108,7 +108,7 @@ library
     , bytestring >=0.10
     , data-fix
     , github-rest
-    , hnix >=0.11 && <0.13
+    , hnix >=0.13.1
     , monad-validate
     , mtl
     , process >=1.2

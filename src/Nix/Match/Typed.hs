@@ -201,8 +201,8 @@ typedMatcherGen
   -> Q (([T.Text], [T.Text]), Exp)
 typedMatcherGen parseNix collect add strip s = do
   expr <- case parseNix (T.pack s) of
-    Failure err -> fail $ show err
-    Success e   -> pure e
+    Left err -> fail $ show err
+    Right e  -> pure e
   let (opt, req) = collect expr
       optT       = symbolList opt
       reqT       = symbolList req

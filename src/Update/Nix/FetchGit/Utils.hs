@@ -38,7 +38,7 @@ import           Data.Time                      ( Day
                                                 )
 import           Nix.Atoms                      ( NAtom(NBool) )
 import           Nix.Expr                hiding ( SourcePos )
-import           Nix.Parser                     ( Result(..)
+import           Nix.Parser                     ( Result
                                                 , parseNixFileLoc
                                                 , parseNixTextLoc
                                                 )
@@ -48,13 +48,13 @@ import           Update.Span
 
 ourParseNixText :: Text -> Either Warning NExprLoc
 ourParseNixText t = case parseNixTextLoc t of
-  Failure parseError -> Left (CouldNotParseInput (tShow parseError))
-  Success expr       -> pure expr
+  Left parseError -> Left (CouldNotParseInput (tShow parseError))
+  Right expr      -> pure expr
 
 ourParseNixFile :: FilePath -> M NExprLoc
 ourParseNixFile f = liftIO (parseNixFileLoc f) >>= \case
-  Failure parseError -> refute1 (CouldNotParseInput (tShow parseError))
-  Success expr       -> pure expr
+  Left parseError -> refute1 (CouldNotParseInput (tShow parseError))
+  Right expr      -> pure expr
 
 -- | Get the url from either a nix expression for the url or a repo and owner
 -- expression.

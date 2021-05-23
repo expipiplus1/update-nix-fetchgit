@@ -127,6 +127,3 @@ instance Read Regex where
 instance ParseField Regex where
   metavar _ = "REGEX"
   readField = eitherReader makeRegexM
-
-instance (e ~ String) => MonadFail (Either e) where
-  fail = Left
