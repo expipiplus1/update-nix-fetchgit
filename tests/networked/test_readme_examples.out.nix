@@ -2,7 +2,7 @@
   a = { stdenv, fetchgit }:
     stdenv.mkDerivation rec {
       name = "foo-${version}";
-      version = "2016-06-26";
+      version = "unstable-2016-06-26";
       # ^ version will be updated to the date of the new revision
       src = fetchgit {
         url = "/tmp/nix-update-fetchgit-test/repo1";

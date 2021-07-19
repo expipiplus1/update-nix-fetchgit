@@ -1,5 +1,5 @@
 {
-  version = "2016-06-26";
+  version = "unstable-2016-06-26";
 
   should-error = fetchgit rec {
     url = "/tmp/nix-update-fetchgit-test/missingRepo";

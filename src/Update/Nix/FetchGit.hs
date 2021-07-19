@@ -135,11 +135,12 @@ evalUpdates = fmap snd . go
       let latestDate = maximumMay (catMaybes ds)
       pure
         ( latestDate
-        , [ SpanUpdate (exprSpan v) (quoteString . pack . show $ d)
+        , [ SpanUpdate (exprSpan v)
+                       (quoteString . ("unstable-" <>) . pack . show $ d)
           | Just d <- pure latestDate
           , Just v <- pure versionExpr
           ]
-          <> concat ss
+        <> concat ss
         )
 
 ----------------------------------------------------------------
