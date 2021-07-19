@@ -12,6 +12,8 @@ export GIT_COMMITTER_NAME='joe'
 export GIT_AUTHOR_NAME='joe'
 export GIT_COMMITTER_EMAIL='joe@example.com'
 export GIT_AUTHOR_EMAIL='joe@example.com'
+export XDG_CONFIG_DIRS=
+export HOME=
 
 git init repo1
 cd repo1
