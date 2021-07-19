@@ -1,6 +1,7 @@
 # Changelog
 
 ## WIP
+- Add `unstable-` prefix to versions when using dates
 
 ## [0.2.7] - 2021-05-23
 
