@@ -38,8 +38,7 @@ import           Data.Time                      ( Day
                                                 )
 import           Nix.Atoms                      ( NAtom(NBool) )
 import           Nix.Expr                hiding ( SourcePos )
-import           Nix.Parser                     ( Result
-                                                , parseNixFileLoc
+import           Nix.Parser                     ( parseNixFileLoc
                                                 , parseNixTextLoc
                                                 )
 import           Update.Nix.FetchGit.Types
@@ -92,7 +91,6 @@ exprBool = \case
 -- | Get the 'SrcSpan' covering a particular expression.
 exprSpan :: NExprLoc -> SrcSpan
 exprSpan (AnnE s _) = s
-exprSpan _ = error "unreachable" -- TODO: Add pattern completeness to hnix
 
 -- | Given an expression that is supposed to represent a function,
 -- extracts the name of the function.  If we cannot figure out the
