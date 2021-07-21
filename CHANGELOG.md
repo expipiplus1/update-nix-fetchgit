@@ -2,6 +2,9 @@
 
 ## WIP
 
+## [0.2.9] - 2021-07-21
+- Fix dotgit / deepClone test sha256
+
 ## [0.2.8] - 2021-07-19
 - Add `unstable-` prefix to versions when using dates
 
