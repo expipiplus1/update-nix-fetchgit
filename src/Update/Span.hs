@@ -86,4 +86,4 @@ linearizeSourcePos t l c = fromIntegral lineCharOffset + c
 
 prettyPrintSourcePos :: SourcePos -> String
 prettyPrintSourcePos (SourcePos _ row column) =
-  "line " <> show row <> " column " <> show column
+  show (unPos row) <> ":" <> show (unPos column)
