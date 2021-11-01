@@ -62,8 +62,6 @@ tests:
   update-nix-fetchgit-samples:
     source-dirs: tests
     main: Driver.hs
-    build-tools:
-    - tasty-discover
     dependencies:
     - base >= 4.7 && < 5
     - directory

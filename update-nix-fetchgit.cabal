@@ -195,8 +195,6 @@ test-suite update-nix-fetchgit-samples
       TypeOperators
       ViewPatterns
   ghc-options: -Wall
-  build-tool-depends:
-      tasty-discover:tasty-discover
   build-depends:
       base >=4.7 && <5
     , directory
