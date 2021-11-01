@@ -62,7 +62,7 @@ data Options w = Options
   , location
       :: w ::: [Position] <?> "Source location to limit updates to, Combined using inclusive or"
   , attribute
-      :: w ::: [Regex] <?> "Pattern (POSIX regex) to limit updates to expressions under matching names in attrsets and let bindings. Combined using inclusing or, if this isn't specified then no expressions will be filtered by attribute name"
+      :: w ::: [Regex] <?> "Pattern (POSIX regex) to limit updates to expressions under matching names in attrsets and let bindings. Combined using inclusive or, if this isn't specified then no expressions will be filtered by attribute name"
   , dryRun :: w ::: Bool <!> "False" <?> "Don't modify the file"
   , onlyCommented :: w ::: Bool <!> "False" <?> "Only update from Git sources which have a comment on the 'rev' (or 'url' for fetchTarball from GitHub) attribute"
   }
