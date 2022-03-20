@@ -2,7 +2,7 @@
 
 with pkgs.haskell.lib;
 
-let drv = import ./default.nix { inherit pkgs compiler; };
+let drv = import ./default.nix { inherit pkgs compiler; forShell = false; };
 
 in {
   tarball = sdistTarball drv;
