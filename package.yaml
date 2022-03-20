@@ -45,7 +45,7 @@ library:
   - async >= 2.1
   - bytestring >= 0.10
   - data-fix
-  - github-rest
+  - github-rest >= 1.1
   - hnix >= 0.13.1
   - monad-validate
   - mtl

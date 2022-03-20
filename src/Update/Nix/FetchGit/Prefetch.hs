@@ -141,11 +141,11 @@ getGitHubRevisionDate owner repo revision = do
     pure $ ref .: "commit" .: "committer" .: "date"
   fromEither $ parseISO8601DateToDay dateString
 
-ghState :: GitHubState
-ghState = GitHubState { token      = Nothing
-                      , userAgent  = "expipiplus1/update-nix-fetchgit"
-                      , apiVersion = "v3"
-                      }
+ghState :: GitHubSettings
+ghState = GitHubSettings { token      = Nothing
+                         , userAgent  = "expipiplus1/update-nix-fetchgit"
+                         , apiVersion = "v3"
+                         }
 
 ----------------------------------------------------------------
 -- Utils
