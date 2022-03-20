@@ -91,6 +91,7 @@ jobs:
           trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= orion:s0C06f1M46DCpHUUP2r8iIrhfytkCbXWltMeMMa4jbw= expipiplus1/update-nix-fetchgit:Z33K0KEImsos+kVTFvZxfLxaBi+D1jEeB6cX0uCo7B0=
           substituters = https://cache.nixos.org/ s3://nix-cache?region=ap-southeast-1&scheme=https&endpoint=binarycache.home.monoid.al
           secret-key-files = /root/nix-sign.sec
+          experimental-features = nix-command
     - uses: actions/checkout@v2
     - run: |
         aws configure set aws_access_key_id nix
