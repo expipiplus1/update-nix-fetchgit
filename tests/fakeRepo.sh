@@ -3,7 +3,7 @@
 # Prepares git repositories on the local machine that we will use for
 # testing.
 
-set -ex
+set -e
 
 # Make sure the commit hashes are predictable.
 export GIT_AUTHOR_DATE='1466974421 +0200'
@@ -15,7 +15,7 @@ export GIT_AUTHOR_EMAIL='joe@example.com'
 export XDG_CONFIG_DIRS=
 export HOME=
 
-git init repo1
+git init repo1 --initial-branch=main
 cd repo1
   echo hi > test.txt
   git add test.txt
@@ -31,7 +31,7 @@ cd ..
 
 export GIT_AUTHOR_DATE='1468031426 -0700'
 export GIT_COMMITTER_DATE='1468031426 -0700'
-git init repo2
+git init repo2 --initial-branch=main
 cd repo2
   echo hi > test.txt
   git add test.txt

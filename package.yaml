@@ -1,5 +1,5 @@
 name: update-nix-fetchgit
-version: "0.2.9"
+version: "0.2.10"
 synopsis: A program to update fetchgit values in Nix expressions
 description: |
   This command-line utility is meant to be used by people maintaining Nix
@@ -45,8 +45,8 @@ library:
   - async >= 2.1
   - bytestring >= 0.10
   - data-fix
-  - github-rest
-  - hnix >= 0.13.1
+  - github-rest >= 1.1
+  - hnix >= 0.14 && < 0.15
   - monad-validate
   - mtl
   - process >= 1.2
@@ -62,8 +62,6 @@ tests:
   update-nix-fetchgit-samples:
     source-dirs: tests
     main: Driver.hs
-    build-tools:
-    - tasty-discover
     dependencies:
     - base >= 4.7 && < 5
     - directory

@@ -2,6 +2,9 @@
 
 ## WIP
 
+## [0.2.10] - 2022-03-20
+- Bump github-rest
+
 ## [0.2.9] - 2021-07-21
 - Fix dotgit / deepClone test sha256
 

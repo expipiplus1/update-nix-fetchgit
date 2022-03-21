@@ -1,11 +1,11 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.34.5.
 --
 -- see: https://github.com/sol/hpack
 
 name:           update-nix-fetchgit
-version:        0.2.9
+version:        0.2.10
 synopsis:       A program to update fetchgit values in Nix expressions
 description:    This command-line utility is meant to be used by people maintaining Nix
                 expressions that fetch files from Git repositories. It automates the process
@@ -107,8 +107,8 @@ library
     , base >=4.7 && <5
     , bytestring >=0.10
     , data-fix
-    , github-rest
-    , hnix >=0.13.1
+    , github-rest >=1.1
+    , hnix ==0.14.*
     , monad-validate
     , mtl
     , process >=1.2
@@ -195,8 +195,6 @@ test-suite update-nix-fetchgit-samples
       TypeOperators
       ViewPatterns
   ghc-options: -Wall
-  build-tool-depends:
-      tasty-discover:tasty-discover
   build-depends:
       base >=4.7 && <5
     , directory
