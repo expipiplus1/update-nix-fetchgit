@@ -46,7 +46,7 @@ library:
   - bytestring >= 0.10
   - data-fix
   - github-rest >= 1.1
-  - hnix >= 0.14 && < 0.15
+  - hnix >= 0.16 && < 0.17
   - monad-validate
   - mtl
   - process >= 1.2

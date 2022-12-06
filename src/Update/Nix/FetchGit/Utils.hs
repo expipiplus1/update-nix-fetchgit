@@ -1,59 +1,64 @@
-
 module Update.Nix.FetchGit.Utils
-  ( RepoLocation(..)
-  , ourParseNixText
-  , ourParseNixFile
-  , extractUrlString
-  , prettyRepoLocation
-  , quoteString
-  , extractFuncName
-  , pathText
-  , exprText
-  , exprBool
-  , exprSpan
-  , containsPosition
-  , parseISO8601DateToDay
-  , formatWarning
-  , fromEither
-  , note
-  , refute1
-  , logVerbose
-  , logNormal
-  ) where
+  ( RepoLocation (..),
+    ourParseNixText,
+    ourParseNixFile,
+    extractUrlString,
+    prettyRepoLocation,
+    quoteString,
+    extractFuncName,
+    pathText,
+    exprText,
+    exprBool,
+    exprSpan,
+    containsPosition,
+    parseISO8601DateToDay,
+    formatWarning,
+    fromEither,
+    note,
+    refute1,
+    logVerbose,
+    logNormal,
+  )
+where
 
-import           Control.Monad.IO.Class         ( MonadIO(liftIO) )
-import           Control.Monad.Reader           ( MonadReader(ask) )
-import           Control.Monad.Validate
-import           Data.Fix
-import           Data.List.NonEmpty            as NE
-import           Data.Monoid
-import           Data.Text                      ( Text
-                                                , splitOn
-                                                , unpack
-                                                )
-import qualified Data.Text                     as T
-import           Data.Time                      ( Day
-                                                , defaultTimeLocale
-                                                , parseTimeM
-                                                )
-import           Nix.Atoms                      ( NAtom(NBool) )
-import           Nix.Expr                hiding ( SourcePos )
-import           Nix.Parser                     ( parseNixFileLoc
-                                                , parseNixTextLoc
-                                                )
-import           Update.Nix.FetchGit.Types
-import           Update.Nix.FetchGit.Warning
-import           Update.Span
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import Control.Monad.Reader (MonadReader (ask))
+import Control.Monad.Validate
+import Data.Fix
+import Data.List.NonEmpty as NE
+import Data.Monoid
+import Data.Text
+  ( Text,
+    splitOn,
+    unpack,
+  )
+import qualified Data.Text as T
+import Data.Time
+  ( Day,
+    defaultTimeLocale,
+    parseTimeM,
+  )
+import Nix.Atoms (NAtom (NBool))
+import Nix.Expr hiding (SourcePos)
+import Nix.Parser
+  ( parseNixFileLoc,
+    parseNixTextLoc,
+  )
+import Nix.Utils (Path (..))
+import Update.Nix.FetchGit.Types
+import Update.Nix.FetchGit.Warning
+import Update.Span
 
 ourParseNixText :: Text -> Either Warning NExprLoc
 ourParseNixText t = case parseNixTextLoc t of
   Left parseError -> Left (CouldNotParseInput (tShow parseError))
-  Right expr      -> pure expr
+  Right expr -> pure expr
 
 ourParseNixFile :: FilePath -> M NExprLoc
-ourParseNixFile f = liftIO (parseNixFileLoc f) >>= \case
-  Left parseError -> refute1 (CouldNotParseInput (tShow parseError))
-  Right expr      -> pure expr
+ourParseNixFile f =
+  liftIO (parseNixFileLoc (Path f)) >>= \case
+    Left parseError -> refute1 (CouldNotParseInput (tShow parseError))
+    Right expr -> pure expr
 
 -- | Get the url from either a nix expression for the url or a repo and owner
 -- expression.
@@ -65,7 +70,7 @@ extractUrlString = \case
 
 prettyRepoLocation :: RepoLocation -> Text
 prettyRepoLocation = \case
-  URL u      -> u
+  URL u -> u
   GitHub o r -> o <> "/" <> r
   GitLab o r -> o <> "/" <> r
 
@@ -80,57 +85,57 @@ quoteString t = "\"" <> t <> "\""
 -- TODO: Use 'evalExpr' here
 exprText :: NExprLoc -> Either Warning Text
 exprText = \case
-  (AnnE _ (NStr (DoubleQuoted [Plain t]))) -> pure t
+  (Ann _ (NStr (DoubleQuoted [Plain t]))) -> pure t
   e -> Left (NotAString e)
 
 exprBool :: NExprLoc -> Either Warning Bool
 exprBool = \case
-  (AnnE _ (NConstant (NBool b))) -> pure b
-  e                              -> Left (NotABool e)
+  (Ann _ (NConstant (NBool b))) -> pure b
+  e -> Left (NotABool e)
 
 -- | Get the 'SrcSpan' covering a particular expression.
 exprSpan :: NExprLoc -> SrcSpan
-exprSpan (AnnE s _) = s
+exprSpan (Ann s _) = s
 
 -- | Given an expression that is supposed to represent a function,
 -- extracts the name of the function.  If we cannot figure out the
 -- function name, returns Nothing.
-extractFuncName :: NExprLoc -> Maybe Text
-extractFuncName (AnnE _ (NSym name)) = Just name
-extractFuncName (AnnE _ (NSelect _ (NE.last -> StaticKey name) _)) = Just name
+extractFuncName :: NExprLoc -> Maybe VarName
+extractFuncName (Ann _ (NSym name)) = Just name
+extractFuncName (Ann _ (NSelect _ _ (NE.last -> StaticKey name))) = Just name
 extractFuncName _ = Nothing
 
 pathText :: NAttrPath r -> Maybe Text
 pathText = fmap (T.concat . toList) . traverse e
- where
-  e :: NKeyName r -> Maybe Text
-  e = \case
-    StaticKey  s              -> Just s
-    DynamicKey (Plain s)      -> t s
-    DynamicKey EscapedNewline -> Just "\n"
-    DynamicKey (Antiquoted _) -> Nothing
-  t :: NString r -> Maybe Text
-  t =
-    fmap T.concat
-      . traverse a
-      . (\case
-          DoubleQuoted as -> as
-          Indented _ as   -> as
-        )
-  a :: Antiquoted Text r -> Maybe Text
-  a = \case
-    Plain s        -> pure s
-    EscapedNewline -> pure "\n"
-    Antiquoted _   -> Nothing
-
+  where
+    e :: NKeyName r -> Maybe Text
+    e = \case
+      StaticKey (VarName s) -> Just s
+      DynamicKey (Plain s) -> t s
+      DynamicKey EscapedNewline -> Just "\n"
+      DynamicKey (Antiquoted _) -> Nothing
+    t :: NString r -> Maybe Text
+    t =
+      fmap T.concat
+        . traverse a
+        . ( \case
+              DoubleQuoted as -> as
+              Indented _ as -> as
+          )
+    a :: Antiquoted Text r -> Maybe Text
+    a = \case
+      Plain s -> pure s
+      EscapedNewline -> pure "\n"
+      Antiquoted _ -> Nothing
 
 -- Takes an ISO 8601 date and returns just the day portion.
 parseISO8601DateToDay :: Text -> Either Warning Day
 parseISO8601DateToDay t =
   let justDate = (unpack . Prelude.head . splitOn "T") t
-  in  maybe (Left $ InvalidDateString t)
-            Right
-            (parseTimeM False defaultTimeLocale "%Y-%m-%d" justDate)
+   in maybe
+        (Left $ InvalidDateString t)
+        Right
+        (parseTimeM False defaultTimeLocale "%Y-%m-%d" justDate)
 
 formatWarning :: Warning -> Text
 formatWarning (CouldNotParseInput doc) = doc
@@ -179,9 +184,9 @@ tShow = T.pack . show
 ----------------------------------------------------------------
 
 containsPosition :: NExprLoc -> (Int, Int) -> Bool
-containsPosition (Fix (Compose (Ann (SrcSpan begin end) _))) p =
+containsPosition (Fix (Compose (AnnUnit (SrcSpan begin end) _))) p =
   let unSourcePos (SourcePos _ l c) = (unPos l, unPos c)
-  in  p >= unSourcePos begin && p < unSourcePos end
+   in p >= unSourcePos begin && p < unSourcePos end
 
 ----------------------------------------------------------------
 -- Errors
@@ -189,7 +194,7 @@ containsPosition (Fix (Compose (Ann (SrcSpan begin end) _))) p =
 
 fromEither :: Either Warning a -> M a
 fromEither = \case
-  Left  e -> refute1 e
+  Left e -> refute1 e
   Right a -> pure a
 
 note :: Warning -> Maybe a -> M a
@@ -206,7 +211,7 @@ refute1 = refute . Dual . pure
 
 logVerbose :: Text -> M ()
 logVerbose t = do
-  Env{..} <- ask
+  Env {..} <- ask
   liftIO $ sayLog Verbose t
 
 logNormal :: Text -> M ()
