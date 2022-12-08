@@ -19,7 +19,7 @@ jobs:
       matrix:
         os: [ "ubuntu-latest" ]
         cabal: [ "latest" ]
-        ghc: [ "8.8", "8.10" ]
+        ghc: [ "8.10", "9.0" ]
       fail-fast: false
 
     steps:
@@ -62,6 +62,7 @@ jobs:
 
     - name: Build dependencies
       run: |
+        cabal install tasty-discover
         cabal build all --only-dependencies $cabalConfig
 
     - name: Build
