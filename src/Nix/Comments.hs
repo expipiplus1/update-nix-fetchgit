@@ -1,18 +1,20 @@
 module Nix.Comments
-  ( annotateWithComments
-  , Comment
-  , NExprCommentsF
-  , NExprComments
-  ) where
+  ( annotateWithComments,
+    Comment,
+    NExprCommentsF,
+    NExprComments,
+  )
+where
 
-import           Data.Text                      ( Text )
-import           Data.Vector                    ( (!?)
-                                                , Vector
-                                                )
-import           Data.Fix
-import           Nix.Expr
-import qualified Data.Text                     as T
-import           Data.Char                      ( isSpace )
+import Data.Char (isSpace)
+import Data.Fix
+import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Vector
+  ( Vector,
+    (!?),
+  )
+import Nix.Expr
 
 type Comment = Text
 
@@ -38,22 +40,23 @@ type NExprComments = Fix NExprCommentsF
 -- [(1 + { a = 2; },Just "baz"),(1,Just "foo"),({ a = 2; },Just "baz"),(2,Just "bar")]
 annotateWithComments :: Vector Text -> NExprLoc -> NExprComments
 annotateWithComments sourceLines = go
- where
-  go :: NExprLoc -> NExprComments
-  go = Fix . go' . fmap go . unFix
+  where
+    go :: NExprLoc -> NExprComments
+    go = Fix . go' . fmap go . unFix
 
-  go' :: NExprLocF f -> NExprCommentsF f
-  go' e =
-    let
-      comment = case spanEnd . annotation . getCompose $ e of
-        SourcePos _ line col -> do
-          theLine                <- sourceLines !? (unPos line - 1)
-          theLineAfterExpression <- dropMaybe (unPos col - 1) theLine
-          let theLineAfterCruft = T.dropWhile (\c -> isSpace c || (c == ';'))
-                                              theLineAfterExpression
-          ('#', theComment) <- T.uncons theLineAfterCruft
-          pure (T.strip theComment)
-    in  Compose (Ann comment e)
+    go' :: NExprLocF f -> NExprCommentsF f
+    go' e =
+      let comment = case spanEnd . annotation . getCompose $ e of
+            SourcePos _ line col -> do
+              theLine <- sourceLines !? (unPos line - 1)
+              theLineAfterExpression <- dropMaybe (unPos col - 1) theLine
+              let theLineAfterCruft =
+                    T.dropWhile
+                      (\c -> isSpace c || (c == ';'))
+                      theLineAfterExpression
+              ('#', theComment) <- T.uncons theLineAfterCruft
+              pure (T.strip theComment)
+       in Compose (AnnUnit comment e)
 
 ----------------------------------------------------------------
 -- Utils

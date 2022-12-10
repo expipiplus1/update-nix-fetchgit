@@ -2,6 +2,9 @@
 
 ## WIP
 
+## [0.2.11] - 2022-12-06
+- Changes for hnix-0.16
+
 ## [0.2.10] - 2022-03-20
 - Bump github-rest
 
