@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 # Prepares git repositories on the local machine that we will use for
 # testing.

@@ -42,24 +42,25 @@ runTest f =
       inBase = System.FilePath.takeBaseName inFile
 
   System.Directory.copyFile inFile (dir </> inBase)
+  testScript <- System.Directory.makeAbsolute "tests/fakeRepo.sh"
 
-  System.Directory.copyFile "tests/fakeRepo.sh" (dir </> "fakeRepo.sh")
-
-  _ <- System.Process.readCreateProcess
-        ((System.Process.shell (dir </> "fakeRepo.sh")) { System.Process.cwd = Just dir })
-        mempty
+  _ <- System.Process.waitForProcess =<< System.Process.runProcess
+    "bash"
+    [testScript] (Just dir)
+    Nothing
+    Nothing Nothing Nothing
 
   replaceFile (dir </> inBase) "/tmp/nix-update-fetchgit-test" (Data.Text.pack dir)
 
   System.Environment.setEnv "NIX_STATE_DIR" $ storeDir </> "state"
-  System.Environment.setEnv "NIX_STORE_DIR" $ storeDir
+  System.Environment.setEnv "NIX_STORE_DIR" storeDir
 
   -- work around race condition https://github.com/NixOS/nix/issues/2706
   System.Directory.createDirectoryIfMissing True $ storeDir </> "state/gcroots"
 
   -- and another - error: SQLite database storeDir </> 'state/db/db.sqlite' is busy
   _ <- System.Process.readCreateProcess
-        (System.Process.shell ("nix-store --init"))
+        (System.Process.shell "nix-store --init")
         mempty
 
   let env = Env (const (Data.Text.IO.hPutStrLn System.IO.stderr)) [] [] Wet False
