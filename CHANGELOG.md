@@ -1,6 +1,7 @@
 # Changelog
 
-## WIP
+## [0.2.12] - 2024-01-DD
+- Changes for hnix-0.17
 
 ## [0.2.11] - 2022-12-06
 - Changes for hnix-0.16

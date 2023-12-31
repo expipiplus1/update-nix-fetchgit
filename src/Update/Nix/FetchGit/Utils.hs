@@ -145,11 +145,11 @@ formatWarning (DuplicateAttrs attrName) =
   "Error: The \"" <> attrName <> "\" attribute appears twice in a set."
 formatWarning (NotAString expr) =
   "Error: The expression at "
-    <> (T.pack . prettyPrintSourcePos . spanBegin . exprSpan) expr
+    <> (T.pack . prettyPrintSourcePos . getSpanBegin . exprSpan) expr
     <> " is not a string literal."
 formatWarning (NotABool expr) =
   "Error: The expression at "
-    <> (T.pack . prettyPrintSourcePos . spanBegin . exprSpan) expr
+    <> (T.pack . prettyPrintSourcePos . getSpanBegin . exprSpan) expr
     <> " is not a boolean literal."
 formatWarning (NixPrefetchGitFailed exitCode errorOutput) =
   "Error: nix-prefetch-git failed with exit code "
@@ -185,7 +185,7 @@ tShow = T.pack . show
 
 containsPosition :: NExprLoc -> (Int, Int) -> Bool
 containsPosition (Fix (Compose (AnnUnit (SrcSpan begin end) _))) p =
-  let unSourcePos (SourcePos _ l c) = (unPos l, unPos c)
+  let unSourcePos (NSourcePos _ (NPos l) (NPos c)) = (unPos l, unPos c)
    in p >= unSourcePos begin && p < unSourcePos end
 
 ----------------------------------------------------------------
