@@ -144,7 +144,7 @@ getGitHubRevisionDate owner repo revision = do
 ghState :: GitHubSettings
 ghState = GitHubSettings { token      = Nothing
                          , userAgent  = "expipiplus1/update-nix-fetchgit"
-                         , apiVersion = "v3"
+                         , apiVersion = "2022-11-28"
                          }
 
 ----------------------------------------------------------------
