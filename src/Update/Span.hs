@@ -6,7 +6,7 @@
 module Update.Span
   ( SpanUpdate(..)
   , SrcSpan(..)
-  , SourcePos(..)
+  , NSourcePos(..)
   , updateSpan
   , updateSpans
   , linearizeSourcePos
@@ -25,7 +25,11 @@ import           Data.Text                      ( Text
                                                 , lines
                                                 , splitAt
                                                 )
-import           Nix.Expr.Types.Annotated
+import           Nix.Expr.Types                 ( NPos(..)
+                                                , NSourcePos(..)
+                                                , unPos
+                                                )
+import           Nix.Expr.Types.Annotated       ( SrcSpan(..) )
 import           Prelude                 hiding ( length
                                                 , lines
                                                 , splitAt
@@ -42,7 +46,7 @@ data SpanUpdate = SpanUpdate
 -- | Update many spans in a file. They must be non-overlapping.
 updateSpans :: [SpanUpdate] -> Text -> Text
 updateSpans us t =
-  let sortedSpans = sortOn (spanBegin . spanUpdateSpan) us
+  let sortedSpans = sortOn (getSpanBegin . spanUpdateSpan) us
       anyOverlap =
         any (uncurry overlaps) (zip <*> tail $ spanUpdateSpan <$> sortedSpans)
   in  assert (not anyOverlap) (foldr updateSpan t sortedSpans)
@@ -60,9 +64,9 @@ overlaps :: SrcSpan -> SrcSpan -> Bool
 overlaps (SrcSpan b1 e1) (SrcSpan b2 e2) =
   b2 >= b1 && b2 < e1 || e2 >= b1 && e2 < e1
 
--- | Split some text at a particular 'SourcePos'
-split :: SourcePos -> Text -> (Text, Text)
-split (SourcePos _ row col) t = splitAt
+-- | Split some text at a particular 'NSourcePos'
+split :: NSourcePos -> Text -> (Text, Text)
+split (NSourcePos _ (NPos row) (NPos col)) t = splitAt
   (fromIntegral
     (linearizeSourcePos t
                         (fromIntegral (unPos row - 1))
@@ -84,6 +88,6 @@ linearizeSourcePos t l c = fromIntegral lineCharOffset + c
  where
   lineCharOffset = sum . fmap ((+ 1) . length) . genericTake l . lines $ t
 
-prettyPrintSourcePos :: SourcePos -> String
-prettyPrintSourcePos (SourcePos _ row column) =
+prettyPrintSourcePos :: NSourcePos -> String
+prettyPrintSourcePos (NSourcePos _ (NPos row) (NPos column)) =
   show (unPos row) <> ":" <> show (unPos column)

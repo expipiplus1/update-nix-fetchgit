@@ -46,8 +46,8 @@ annotateWithComments sourceLines = go
 
     go' :: NExprLocF f -> NExprCommentsF f
     go' e =
-      let comment = case spanEnd . annotation . getCompose $ e of
-            SourcePos _ line col -> do
+      let comment = case getSpanEnd . annotation . getCompose $ e of
+            NSourcePos _ (NPos line) (NPos col) -> do
               theLine <- sourceLines !? (unPos line - 1)
               theLineAfterExpression <- dropMaybe (unPos col - 1) theLine
               let theLineAfterCruft =
